@@ -1,0 +1,12 @@
+:root {
+  --papel: #f6efe4;
+  --tinta: #141414;
+  --rosa: #ff2e88;
+  --vermelho: #e10600;
+  --cobalto: #0047ab;
+  --amarelo: #ffd400;
+  --fonte-display: 'Bodoni Moda', 'Didot', 'Bodoni MT', serif;
+  --fonte-texto: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --gutter: clamp(16px, 4vw, 48px);
+  --max: 1280px;
+}
