@@ -59,4 +59,20 @@ const sobre = defineCollection({
     }),
 });
 
-export const collections = { colecoes, pecas, sobre };
+const croquis = defineCollection({
+  loader: glob({ pattern: '*/index.md', base: './src/content/croquis' }),
+  schema: ({ image }) =>
+    z.object({
+      titulo: z.string(),
+      ordem: z.number().int(),
+      imagem: image(),
+      alt: z.string().min(1, 'Descreva o croqui (texto alternativo)'),
+      paleta: z
+        .array(z.object({ hex: corHex, nome: z.string().min(1) }))
+        .min(3, 'A paleta precisa de 3 a 4 cores')
+        .max(4, 'A paleta precisa de 3 a 4 cores')
+        .optional(),
+    }),
+});
+
+export const collections = { colecoes, pecas, sobre, croquis };

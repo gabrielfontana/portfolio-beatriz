@@ -76,9 +76,9 @@ export function matiz([, a, b]: Lab): number {
   return h < 0 ? h + 360 : h;
 }
 
-/** Fundo do papel: claro e quase sem cor (branco, sombras cinza). */
+/** Fundo e traço: tudo que é quase sem cor e não é preto (branco, sombra do papel, cinza do contorno). */
 export function ehFundo(lab: Lab): boolean {
-  return croma(lab) < 10 && lab[0] > 60;
+  return croma(lab) < 10 && lab[0] > 35;
 }
 
 /** Tom de pele dos croquis: laranja dessaturado, de médio a claro (HSV). */
@@ -89,7 +89,7 @@ export function ehPele([r, g, b]: RGB): boolean {
   const h = ((g - b) / (max - min)) * 60;
   const s = (max - min) / max;
   const v = max / 255;
-  return h >= 10 && h <= 35 && s >= 0.15 && s <= 0.5 && v >= 0.5 && v <= 0.95;
+  return h >= 10 && h <= 35 && s >= 0.15 && s <= 0.56 && v >= 0.5 && v <= 0.95;
 }
 
 const distancia2 = (p: Lab, q: Lab) => (p[0] - q[0]) ** 2 + (p[1] - q[1]) ** 2 + (p[2] - q[2]) ** 2;
@@ -165,11 +165,17 @@ export function nomearCor(lab: Lab): string {
 export function sugerirPaleta(pixels: RGB[]): { cores: CorPaleta[]; aviso?: string } {
   const roupa = pixels.filter((p) => !ehPele(p)).map(rgbParaLab).filter((l) => !ehFundo(l));
   if (roupa.length === 0) return { cores: [], aviso: 'nenhuma cor de roupa encontrada; escreva a paleta à mão' };
-  const grupos = fundirParecidos(kmeans(roupa, 6));
+  // Sombras da mesma cor se fundem; depois, da maior área para a menor, só entra
+  // uma cor bem diferente das já escolhidas, para os acessórios pequenos aparecerem.
+  const grupos = fundirParecidos(kmeans(roupa, 10), 20);
   const total = roupa.length;
-  let escolhidos = grupos.filter((g) => g.total / total >= 0.03);
-  if (escolhidos.length < 3) escolhidos = grupos.filter((g) => g.total / total >= 0.01);
-  const cores = escolhidos.slice(0, 4).map((g) => ({ hex: rgbParaHex(labParaRgb(g.centro)), nome: nomearCor(g.centro) }));
+  const escolhidos: Grupo[] = [];
+  for (const g of grupos) {
+    if (escolhidos.length === 4 || g.total / total < 0.01) break;
+    if (escolhidos.some((e) => deltaE(e.centro, g.centro) < 25)) continue;
+    escolhidos.push(g);
+  }
+  const cores = escolhidos.map((g) => ({ hex: rgbParaHex(labParaRgb(g.centro)), nome: nomearCor(g.centro) }));
   if (cores.length < 3) {
     return { cores, aviso: `só ${cores.length} cor(es) encontrada(s); escreva a paleta à mão` };
   }

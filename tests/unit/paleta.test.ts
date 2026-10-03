@@ -31,14 +31,14 @@ describe('conversões', () => {
 });
 
 describe('filtros', () => {
-  it('ehFundo descarta branco e cinzas claros da sombra do papel', () => {
-    for (const hex of ['#ffffff', '#d4cfcd', '#c9d1d5', '#a1a6ad']) expect(ehFundo(lab(hex)), hex).toBe(true);
+  it('ehFundo descarta branco e cinzas (sombra do papel, traço do desenho)', () => {
+    for (const hex of ['#ffffff', '#d4cfcd', '#c9d1d5', '#a1a6ad', '#808080', '#685f5b', '#64646b']) expect(ehFundo(lab(hex)), hex).toBe(true);
   });
   it('ehFundo preserva preto, cores saturadas e azul-claro', () => {
-    for (const hex of ['#2b2626', '#bf343a', '#0f74ba', '#cde2f7', '#808080']) expect(ehFundo(lab(hex)), hex).toBe(false);
+    for (const hex of ['#2b2626', '#212020', '#bf343a', '#0f74ba', '#cde2f7']) expect(ehFundo(lab(hex)), hex).toBe(false);
   });
   it('ehPele reconhece tons de pele dos croquis', () => {
-    for (const hex of ['#cb9c86', '#d9aa8e', '#ba856a', '#ce9775', '#ceab9b']) expect(ehPele(hexParaRgb(hex)), hex).toBe(true);
+    for (const hex of ['#cb9c86', '#d9aa8e', '#ba856a', '#ce9775', '#ceab9b', '#ca885f', '#9b6f49']) expect(ehPele(hexParaRgb(hex)), hex).toBe(true);
   });
   it('ehPele não descarta roupas vermelhas, amarelas, pretas, azuis nem cabelo escuro', () => {
     for (const hex of ['#bf343a', '#f1bc55', '#2b2626', '#0f74ba', '#5e4c41', '#b76d6d']) {
@@ -99,6 +99,17 @@ describe('sugerirPaleta', () => {
     expect(cores.map((c) => c.nome)).toEqual(['Vermelho', 'Azul', 'Preto']);
     expect(deltaE(lab(cores[0].hex), lab('#bf343a'))).toBeLessThan(3);
     for (const c of cores) expect(c.hex).toMatch(/^#[0-9a-f]{6}$/);
+  });
+  it('prefere cores distintas (acessórios) a sombras da mesma cor', () => {
+    const pixels = [
+      ...repetir('#ffffff', 500),
+      ...repetir('#1476bb', 400), // jeans
+      ...repetir('#114e79', 200), // sombra do jeans
+      ...repetir('#15344b', 120), // sombra mais escura do jeans
+      ...repetir('#111111', 60), // sapatos
+      ...repetir('#c8343a', 40), // bolsa vermelha (pequena)
+    ];
+    expect(sugerirPaleta(pixels).cores.map((c) => c.nome)).toEqual(['Azul', 'Preto', 'Vermelho']);
   });
   it('limita a 4 cores', () => {
     const pixels = ['#bf343a', '#0f74ba', '#f1bc55', '#2b2626', '#2e8b57', '#ff2e88'].flatMap((h, i) => repetir(h, 100 + i * 10));
