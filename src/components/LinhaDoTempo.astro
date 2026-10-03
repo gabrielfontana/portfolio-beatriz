@@ -1,0 +1,46 @@
+---
+import { ordenarTrajetoria, formatarPeriodo, type ItemTrajetoria } from '../lib/trajetoria';
+
+interface Props {
+  itens: ItemTrajetoria[];
+}
+const itens = ordenarTrajetoria(Astro.props.itens);
+const rotuloTipo = { formacao: 'Formação', experiencia: 'Experiência' } as const;
+---
+<section class="container trajetoria" aria-labelledby="t-trajetoria">
+  <h2 id="t-trajetoria" data-anim="revelar">Trajetória</h2>
+  <ol class="linha" data-anim="linha">
+    {itens.map((i) => (
+      <li class="linha__item" data-anim="revelar" data-tipo={i.tipo}>
+        <p class="linha__periodo">{formatarPeriodo(i.inicio, i.fim)}</p>
+        <p class="kicker">{rotuloTipo[i.tipo]}</p>
+        <h3>{i.titulo}</h3>
+        <p class="linha__local">{i.local}</p>
+        {i.descricao && <p>{i.descricao}</p>}
+      </li>
+    ))}
+  </ol>
+</section>
+
+<style>
+  .trajetoria { padding-block: 4rem; }
+  .trajetoria h2 { margin-bottom: 2.5rem; }
+  .linha { --progresso: 1; position: relative; list-style: none; margin: 0; padding: 0 0 0 2rem; display: grid; gap: 2.5rem; }
+  .linha::before {
+    content: ''; position: absolute; left: 0.4rem; top: 0; bottom: 0; width: 4px;
+    background: var(--tinta); transform: scaleY(var(--progresso)); transform-origin: top;
+  }
+  .linha__item { position: relative; }
+  .linha__item::before {
+    content: ''; position: absolute; left: -2rem; top: 0.35rem;
+    width: 1.1rem; height: 1.1rem; border-radius: 50%; border: 3px solid var(--tinta);
+    background: var(--rosa);
+  }
+  .linha__item[data-tipo='formacao']::before { background: var(--amarelo); }
+  .linha__periodo { font-family: var(--fonte-display); font-style: italic; font-size: 1.4rem; margin: 0 0 0.25rem; }
+  .linha__item h3 { margin-block: 0.35rem; }
+  .linha__local { font-weight: 700; margin: 0; }
+  @media (min-width: 768px) {
+    .linha { max-width: 52rem; gap: 3rem; }
+  }
+</style>
