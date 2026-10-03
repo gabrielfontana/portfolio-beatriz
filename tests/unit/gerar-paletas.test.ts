@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import sharp from 'sharp';
 import { parse } from 'yaml';
-import { processarLook, lerPaleta, inserirPaleta, medirAreas } from '../../scripts/gerar-paletas.mjs';
+import { processarLook, lerPaleta, inserirPaleta, medirPaleta } from '../../scripts/gerar-paletas.mjs';
 
 const MD = '---\ntitulo: Look 99\nordem: 99\nimagem: ./croqui.png\nalt: Teste\n---\n';
 
@@ -80,10 +80,34 @@ describe('processarLook', () => {
     expect(r.aviso).toBe('Verde (#2e8b57) cobre só 0% da roupa: tire da paleta');
   });
 
-  it('medirAreas dá a fração da roupa de cada cor do croqui', async () => {
+  it('avisa (sem alterar) quando uma cor escrita à mão só aparece em traços', async () => {
     const pasta = await criarLook();
-    const areas = await medirAreas(join(pasta, 'croqui.png'), [{ hex: '#bf343a' }, { hex: '#0f74ba' }, { hex: '#2b2626' }]);
-    expect(areas.map((a: number) => Number(a.toFixed(2)))).toEqual([0.45, 0.3, 0.25]);
+    // Traços verdes de 2px a cada 10 linhas da faixa vermelha: 9% da roupa, mas só traço.
+    const { data, info } = await sharp(join(pasta, 'croqui.png')).raw().toBuffer({ resolveWithObject: true });
+    for (let y = 100; y < 190; y += 10) {
+      for (const yy of [y, y + 1]) for (let x = 0; x < 200; x++) data.set([46, 139, 87], (yy * 200 + x) * info.channels);
+    }
+    await sharp(data, { raw: info }).png().toFile(join(pasta, 'croqui2.png'));
+    unlinkSync(join(pasta, 'croqui.png'));
+    writeFileSync(join(pasta, 'croqui.png'), readFileSync(join(pasta, 'croqui2.png')));
+    unlinkSync(join(pasta, 'croqui2.png'));
+    const manual = `${MD.slice(0, -4)}paleta:
+  - hex: "#bf343a"
+    nome: Vermelho
+  - hex: "#2e8b57"
+    nome: Verde
+---
+`;
+    writeFileSync(join(pasta, 'index.md'), manual);
+    const r = await processarLook(pasta);
+    expect(r.aviso).toBe('Verde (#2e8b57) só aparece em traços e contornos: tire da paleta');
+  });
+
+  it('medirPaleta dá área e parte sólida de cada cor do croqui', async () => {
+    const pasta = await criarLook();
+    const m = await medirPaleta(join(pasta, 'croqui.png'), [{ hex: '#bf343a' }, { hex: '#0f74ba' }, { hex: '#2b2626' }]);
+    expect(m.map((x: { area: number }) => Number(x.area.toFixed(2)))).toEqual([0.45, 0.3, 0.25]);
+    for (const x of m) expect(x.solida).toBeGreaterThan(0.1);
   });
 
   it('apaga máscaras de cores que saíram da paleta', async () => {

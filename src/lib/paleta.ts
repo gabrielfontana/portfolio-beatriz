@@ -163,55 +163,118 @@ export function nomearCor(lab: Lab): string {
 
 /** Uma cor da paleta precisa cobrir ao menos esta fração da roupa; abaixo disso é ínfima. */
 export const AREA_MINIMA = 0.05;
+/** Raio (px, com o croqui em 600px de largura) que apaga traços, contornos e costuras. */
+export const RAIO_TRACO = 3;
+/** Fração da roupa que precisa sobrar de uma cor depois de apagar os traços. */
+export const SOLIDA_MINIMA = 0.005;
+/** Alto da figura ignorado nas medidas: cabeça e cabelo não são roupa. */
+export const CABECA = 0.12;
 
-/**
- * Fração da roupa (sem fundo e pele) coberta por cada cor da paleta. Cada pixel conta para a
- * cor mais próxima, se estiver perto o bastante para entrar na máscara dela.
- */
-export function areasDasCores(pixels: RGB[], hexes: string[], limite = 18): number[] {
-  const alvos = hexes.map((h) => rgbParaLab(hexParaRgb(h)));
-  const contagem = alvos.map(() => 0);
-  for (const p of pixels) {
-    if (ehPele(p)) continue;
-    const lab = rgbParaLab(p);
-    if (ehFundo(lab)) continue;
-    let melhor = -1;
-    let menor = limite;
-    alvos.forEach((a, i) => {
-      const d = deltaE(lab, a);
-      if (d < menor) {
-        menor = d;
-        melhor = i;
-      }
-    });
-    if (melhor >= 0) contagem[melhor]++;
-  }
-  const soma = contagem.reduce((a, b) => a + b, 0);
-  return contagem.map((c) => (soma ? c / soma : 0));
+export interface MedidaCor {
+  area: number;
+  solida: number;
 }
 
-/** Sugere de 2 a 4 cores principais de roupa a partir dos pixels de um croqui. */
-export function sugerirPaleta(pixels: RGB[]): { cores: CorPaleta[]; aviso?: string } {
+/** Erosão binária com janela quadrada (2r+1): só sobra o miolo das áreas mais grossas que o traço. */
+export function erodir(mascara: Uint8Array, largura: number, altura: number, r: number): Uint8Array {
+  const passo = (m: Uint8Array, dx: number, dy: number) => {
+    const saida = new Uint8Array(m.length);
+    for (let y = 0; y < altura; y++) {
+      for (let x = 0; x < largura; x++) {
+        let cheio = 1;
+        for (let d = -r; d <= r && cheio; d++) {
+          const xx = x + d * dx;
+          const yy = y + d * dy;
+          if (xx < 0 || yy < 0 || xx >= largura || yy >= altura || !m[yy * largura + xx]) cheio = 0;
+        }
+        saida[y * largura + x] = cheio;
+      }
+    }
+    return saida;
+  };
+  return passo(passo(mascara, 1, 0), 0, 1);
+}
+
+/**
+ * Para cada cor da paleta: a fração da roupa que ela cobre (area) e a fração que sobra
+ * depois de apagar os traços finos (solida). Cada pixel conta para a cor mais próxima,
+ * se estiver perto o bastante para entrar na máscara dela. Fundo, pele e o alto da
+ * figura (cabeça e cabelo) ficam de fora.
+ */
+export function medirCores(
+  pixels: RGB[],
+  largura: number,
+  hexes: string[],
+  { raio = RAIO_TRACO, cabeca = CABECA, limite = 18 } = {},
+): MedidaCor[] {
+  const altura = Math.floor(pixels.length / largura);
+  const labs = pixels.map(rgbParaLab);
+  let topo = -1;
+  let base = -1;
+  for (let y = 0; y < altura; y++) {
+    for (let x = 0; x < largura; x++) {
+      if (!ehFundo(labs[y * largura + x])) {
+        if (topo < 0) topo = y;
+        base = y;
+        break;
+      }
+    }
+  }
+  const zero = hexes.map(() => ({ area: 0, solida: 0 }));
+  if (topo < 0) return zero;
+  const corte = topo + cabeca * (base - topo);
+  const alvos = hexes.map((h) => rgbParaLab(hexParaRgb(h)));
+  const mascaras = alvos.map(() => new Uint8Array(largura * altura));
+  let roupa = 0;
+  for (let i = 0; i < largura * altura; i++) {
+    if (Math.floor(i / largura) < corte || ehPele(pixels[i]) || ehFundo(labs[i])) continue;
+    let melhor = -1;
+    let menor = limite;
+    alvos.forEach((a, k) => {
+      const d = deltaE(labs[i], a);
+      if (d < menor) {
+        menor = d;
+        melhor = k;
+      }
+    });
+    if (melhor >= 0) {
+      mascaras[melhor][i] = 1;
+      roupa++;
+    }
+  }
+  if (roupa === 0) return zero;
+  const contar = (m: Uint8Array) => m.reduce((a, b) => a + b, 0);
+  return mascaras.map((m) => ({
+    area: contar(m) / roupa,
+    solida: contar(erodir(m, largura, altura, raio)) / roupa,
+  }));
+}
+
+/** Cor principal: cobre uma parte visível da roupa e não aparece só em traços e contornos. */
+export function ehPrincipal({ area, solida }: MedidaCor): boolean {
+  return area >= AREA_MINIMA && solida >= SOLIDA_MINIMA;
+}
+
+/** Sugere de 1 a 4 cores principais de roupa a partir dos pixels (linha a linha) de um croqui. */
+export function sugerirPaleta(pixels: RGB[], largura: number, raio = RAIO_TRACO): { cores: CorPaleta[]; aviso?: string } {
+  const semCor = { cores: [], aviso: 'nenhuma cor principal de roupa encontrada; escreva a paleta à mão' };
   const roupa = pixels.filter((p) => !ehPele(p)).map(rgbParaLab).filter((l) => !ehFundo(l));
-  if (roupa.length === 0) return { cores: [], aviso: 'nenhuma cor de roupa encontrada; escreva a paleta à mão' };
+  if (roupa.length === 0) return semCor;
   // Sombras da mesma cor se fundem; depois, da maior área para a menor, só entra
   // uma cor bem diferente das já escolhidas, para os acessórios pequenos aparecerem.
   const grupos = fundirParecidos(kmeans(roupa, 10), 20);
   const total = roupa.length;
   const escolhidos: Grupo[] = [];
   for (const g of grupos) {
-    if (escolhidos.length === 4 || g.total / total < 0.01) break;
+    if (escolhidos.length === 6 || g.total / total < 0.01) break;
     if (escolhidos.some((e) => deltaE(e.centro, g.centro) < 25)) continue;
     escolhidos.push(g);
   }
   const candidatas = escolhidos.map((g) => ({ hex: rgbParaHex(labParaRgb(g.centro)), nome: nomearCor(g.centro) }));
-  // Mede cada candidata do mesmo jeito que as paletas escritas à mão e descarta as ínfimas.
-  const areas = areasDasCores(pixels, candidatas.map((c) => c.hex));
-  const cores = candidatas.filter((_, i) => areas[i] >= AREA_MINIMA);
-  if (cores.length < 2) {
-    return { cores, aviso: `só ${cores.length} cor(es) encontrada(s); escreva a paleta à mão` };
-  }
-  return { cores };
+  // Mede cada candidata do mesmo jeito que as paletas escritas à mão: só ficam as principais.
+  const medidas = medirCores(pixels, largura, candidatas.map((c) => c.hex), { raio });
+  const cores = candidatas.filter((_, i) => ehPrincipal(medidas[i])).slice(0, 4);
+  return cores.length ? { cores } : semCor;
 }
 
 /** Pixel faz parte da área de uma cor da paleta (para as máscaras). */

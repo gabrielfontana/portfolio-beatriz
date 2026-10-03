@@ -43,9 +43,9 @@ alt: Descrição do desenho para quem não enxerga.
 ---
 ```
 1. Use nomes de arquivo em minúsculas (`croqui.jpeg`) e fotos em JPG/PNG; HEIC precisa ser convertido.
-2. Rode `npm run paletas`. O script sugere de 2 a 4 cores principais da roupa (ignora fundo e pele; cores que cobrem menos de 5% da roupa ficam de fora), grava em `paleta:` no `index.md` e gera as máscaras `mascara-*.png` do efeito de destaque.
+2. Rode `npm run paletas`. O script sugere de 1 a 4 cores principais da roupa, grava em `paleta:` no `index.md` e gera as máscaras `mascara-*.png` do efeito de destaque. Ficam de fora fundo, pele, cabelo, cores ínfimas (menos de 5% da roupa) e cores que só aparecem em traços, contornos e costuras.
 3. Não gostou de uma cor? Edite `paleta:` à mão (hex **entre aspas**, ex.: `"#bf343a"`) e rode `npm run paletas` de novo: sua paleta é mantida e só as máscaras são refeitas.
-   Se uma cor escrita à mão cobrir menos de 5% da roupa, o script avisa (sem mexer na paleta) para você tirá-la.
+   Se uma cor escrita à mão for ínfima ou só de traço, o script avisa (sem mexer na paleta) para você tirá-la.
 4. Se esquecer de rodar o script, o build avisa qual look e qual cor precisam dele.
 
 ## Antes de publicar

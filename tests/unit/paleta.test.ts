@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   hexParaRgb, rgbParaHex, rgbParaLab, labParaRgb, deltaE, ehFundo, ehPele,
-  kmeans, fundirParecidos, nomearCor, sugerirPaleta, pertenceACor, areasDasCores, type RGB, type Lab,
+  kmeans, fundirParecidos, nomearCor, sugerirPaleta, pertenceACor, medirCores, ehPrincipal, type RGB, type Lab,
 } from '../../src/lib/paleta';
 
 const lab = (hex: string) => rgbParaLab(hexParaRgb(hex));
@@ -94,7 +94,7 @@ describe('sugerirPaleta', () => {
       ...repetir('#2b2626', 200),
       ...repetir('#00ff00', 5),
     ];
-    const { cores, aviso } = sugerirPaleta(pixels);
+    const { cores, aviso } = sugerirPaleta(pixels, 50, 1);
     expect(aviso).toBeUndefined();
     expect(cores.map((c) => c.nome)).toEqual(['Vermelho', 'Azul', 'Preto']);
     expect(deltaE(lab(cores[0].hex), lab('#bf343a'))).toBeLessThan(3);
@@ -107,18 +107,19 @@ describe('sugerirPaleta', () => {
       ...repetir('#114e79', 200), // sombra do jeans
       ...repetir('#15344b', 120), // sombra mais escura do jeans
       ...repetir('#111111', 60), // sapatos
-      ...repetir('#c8343a', 60), // bolsa vermelha (pequena, mas acima de 5%)
+      ...repetir('#c8343a', 60), // bolsa vermelha (pequena, mas sólida)
     ];
-    expect(sugerirPaleta(pixels).cores.map((c) => c.nome)).toEqual(['Azul', 'Preto', 'Vermelho']);
+    expect(sugerirPaleta(pixels, 20, 1).cores.map((c) => c.nome)).toEqual(['Azul', 'Preto', 'Vermelho']);
   });
   it('limita a 4 cores', () => {
     const pixels = ['#bf343a', '#0f74ba', '#f1bc55', '#2b2626', '#2e8b57', '#ff2e88'].flatMap((h, i) => repetir(h, 100 + i * 10));
-    expect(sugerirPaleta(pixels).cores).toHaveLength(4);
+    expect(sugerirPaleta(pixels, 20, 1).cores).toHaveLength(4);
   });
-  it('avisa quando não há cores suficientes', () => {
-    const { cores, aviso } = sugerirPaleta([...repetir('#ffffff', 100), ...repetir('#bf343a', 100)]);
-    expect(cores).toHaveLength(1);
-    expect(aviso).toMatch(/escreva a paleta à mão/);
+  it('uma cor só basta; sem nenhuma cor de roupa, avisa', () => {
+    expect(sugerirPaleta([...repetir('#ffffff', 100), ...repetir('#bf343a', 100)], 10, 1)).toEqual({
+      cores: [expect.objectContaining({ nome: 'Vermelho' })],
+    });
+    expect(sugerirPaleta(repetir('#ffffff', 100), 10, 1).aviso).toMatch(/escreva a paleta à mão/);
   });
   it('não sugere cores ínfimas (menos de 5% da roupa)', () => {
     const pixels = [
@@ -127,31 +128,48 @@ describe('sugerirPaleta', () => {
       ...repetir('#111111', 300),
       ...repetir('#c8343a', 30), // 3% da roupa
     ];
-    const { cores, aviso } = sugerirPaleta(pixels);
-    expect(cores.map((c) => c.nome)).toEqual(['Azul', 'Preto']);
-    expect(aviso).toBeUndefined();
+    expect(sugerirPaleta(pixels, 20, 1).cores.map((c) => c.nome)).toEqual(['Azul', 'Preto']);
+  });
+  it('não sugere cores que só aparecem em contornos e traços', () => {
+    // Roupa azul contornada por linhas pretas de 1px (12% da roupa), com sapatos vermelhos sólidos.
+    const linha = (fill: string): RGB[] => [...repetir('#ffffff', 5), ...repetir('#111111', 1), ...repetir(fill, 28), ...repetir('#111111', 1), ...repetir('#ffffff', 5)];
+    const pixels = [
+      ...repetir('#ffffff', 40 * 5),
+      ...Array.from({ length: 30 }, () => linha('#1476bb')).flat(),
+      ...[0, 1].flatMap(() => [...repetir('#ffffff', 5), ...repetir('#111111', 30), ...repetir('#ffffff', 5)]),
+      ...Array.from({ length: 6 }, () => [...repetir('#ffffff', 5), ...repetir('#c8343a', 30), ...repetir('#ffffff', 5)]).flat(),
+    ];
+    expect(sugerirPaleta(pixels, 40, 1).cores.map((c) => c.nome)).toEqual(['Azul', 'Vermelho']);
   });
 });
 
-describe('areasDasCores', () => {
-  it('dá a fração da roupa coberta por cada cor (sem fundo e pele)', () => {
-    const pixels = [
-      ...repetir('#ffffff', 900),
-      ...repetir('#cb9c86', 300),
-      ...repetir('#bf343a', 750),
-      ...repetir('#c43a40', 50), // sombra próxima: conta para o vermelho
-      ...repetir('#0f74ba', 190),
-      ...repetir('#2b2626', 10),
-    ];
-    const areas = areasDasCores(pixels, ['#bf343a', '#0f74ba', '#2b2626']);
-    expect(areas.map((a) => Number(a.toFixed(3)))).toEqual([0.8, 0.19, 0.01]);
+describe('medirCores', () => {
+  it('mede a área de cada cor e quanto dela sobra sem os traços finos', () => {
+    // 10 px de largura: 8 linhas vermelhas e 2 pretas (um traço).
+    const pixels = [...repetir('#bf343a', 80), ...repetir('#111111', 20)];
+    const [vermelho, preto] = medirCores(pixels, 10, ['#bf343a', '#111111'], { raio: 1, cabeca: 0 });
+    expect(vermelho.area).toBeCloseTo(0.8);
+    expect(vermelho.solida).toBeCloseTo(0.48); // linhas 1–6, colunas 1–8
+    expect(preto.area).toBeCloseTo(0.2);
+    expect(preto.solida).toBe(0);
+  });
+  it('ignora o alto da figura (cabeça e cabelo não são roupa)', () => {
+    const pixels = [...repetir('#ffffff', 8), ...repetir('#111111', 8), ...repetir('#bf343a', 16)];
+    const [preto, vermelho] = medirCores(pixels, 4, ['#111111', '#bf343a'], { raio: 1, cabeca: 0.4 });
+    expect(preto.area).toBe(0);
+    expect(vermelho.area).toBe(1);
   });
   it('cada pixel conta só para a cor mais próxima', () => {
-    const areas = areasDasCores(repetir('#bf343a', 100), ['#bf343a', '#c43a40']);
-    expect(areas).toEqual([1, 0]);
+    const m = medirCores(repetir('#bf343a', 100), 10, ['#bf343a', '#c43a40'], { raio: 1, cabeca: 0 });
+    expect(m.map((x) => x.area)).toEqual([1, 0]);
   });
   it('sem nenhum pixel da paleta, tudo zero', () => {
-    expect(areasDasCores(repetir('#ffffff', 10), ['#bf343a'])).toEqual([0]);
+    expect(medirCores(repetir('#ffffff', 10), 10, ['#bf343a'])).toEqual([{ area: 0, solida: 0 }]);
+  });
+  it('cor principal: área de ao menos 5% e parte sólida de ao menos 0,5%', () => {
+    expect(ehPrincipal({ area: 0.05, solida: 0.005 })).toBe(true);
+    expect(ehPrincipal({ area: 0.049, solida: 0.04 })).toBe(false);
+    expect(ehPrincipal({ area: 0.2, solida: 0.004 })).toBe(false);
   });
 });
 

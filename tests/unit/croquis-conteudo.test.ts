@@ -2,18 +2,19 @@ import { describe, it, expect } from 'vitest';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { lerPaleta, medirAreas } from '../../scripts/gerar-paletas.mjs';
-import { AREA_MINIMA } from '../../src/lib/paleta';
+import { lerPaleta, medirPaleta } from '../../scripts/gerar-paletas.mjs';
+import { ehPrincipal, type MedidaCor } from '../../src/lib/paleta';
 
 const raiz = fileURLToPath(new URL('../../src/content/croquis/', import.meta.url));
 
 describe('paletas dos croquis publicados', () => {
   for (const look of readdirSync(raiz).sort()) {
-    it(`${look}: só cores principais (cada uma cobre ao menos 5% da roupa)`, async () => {
+    it(`${look}: só cores principais (nem ínfimas, nem de traço/contorno)`, async () => {
       const paleta = lerPaleta(readFileSync(join(raiz, look, 'index.md'), 'utf8'));
-      const areas: number[] = await medirAreas(join(raiz, look, 'croqui.jpeg'), paleta);
-      const infimas = paleta.filter((_: unknown, i: number) => areas[i] < AREA_MINIMA);
-      expect(infimas, areas.map((a) => (a * 100).toFixed(1)).join(' / ')).toEqual([]);
+      const medidas: MedidaCor[] = await medirPaleta(join(raiz, look, 'croqui.jpeg'), paleta);
+      const fora = paleta.filter((_: unknown, i: number) => !ehPrincipal(medidas[i]));
+      const detalhe = medidas.map((m) => `${(m.area * 100).toFixed(1)}%/${(m.solida * 100).toFixed(2)}%`).join(' · ');
+      expect(fora, detalhe).toEqual([]);
     });
   }
 });

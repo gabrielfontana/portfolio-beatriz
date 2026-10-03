@@ -5,11 +5,10 @@ import { parse } from 'yaml';
 import { existsSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { AREA_MINIMA, areasDasCores, hexParaRgb, pertenceACor, rgbParaLab, sugerirPaleta } from '../src/lib/paleta.ts';
+import { AREA_MINIMA, ehPrincipal, hexParaRgb, medirCores, pertenceACor, rgbParaLab, sugerirPaleta } from '../src/lib/paleta.ts';
 import { chaveDaCor } from '../src/lib/croquis.ts';
 
 const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---/;
-const LARGURA_ANALISE = 160;
 const LARGURA_MASCARA = 600;
 
 export function lerPaleta(md) {
@@ -57,10 +56,10 @@ function paraRgb(data) {
   return pixels;
 }
 
-/** Fração da roupa coberta por cada cor da paleta, na mesma resolução das máscaras. */
-export async function medirAreas(arquivoCroqui, paleta) {
-  const { data } = await lerPixels(arquivoCroqui, LARGURA_MASCARA);
-  return areasDasCores(paraRgb(data), paleta.map((c) => c.hex));
+/** Área e parte sólida (sem traços) de cada cor da paleta, na mesma resolução das máscaras. */
+export async function medirPaleta(arquivoCroqui, paleta) {
+  const { data, info } = await lerPixels(arquivoCroqui, LARGURA_MASCARA);
+  return medirCores(paraRgb(data), info.width, paleta.map((c) => c.hex));
 }
 
 export async function gerarMascara(arquivoCroqui, hex, destino) {
@@ -85,10 +84,10 @@ export async function processarLook(pasta) {
   let aviso;
 
   if (!paleta) {
-    const { data } = await lerPixels(croqui, LARGURA_ANALISE);
-    const sugestao = sugerirPaleta(paraRgb(data));
+    const { data, info } = await lerPixels(croqui, LARGURA_MASCARA);
+    const sugestao = sugerirPaleta(paraRgb(data), info.width);
     aviso = sugestao.aviso;
-    if (sugestao.cores.length >= 3) {
+    if (sugestao.cores.length) {
       paleta = sugestao.cores;
       writeFileSync(arquivoMd, inserirPaleta(md, paleta));
       criada = true;
@@ -96,13 +95,18 @@ export async function processarLook(pasta) {
   }
 
   if (paleta) {
-    // Paleta escrita à mão nunca é alterada: cor ínfima só gera aviso.
-    const areas = await medirAreas(croqui, paleta);
-    const infimas = paleta
-      .map((c, i) => ({ ...c, area: areas[i] }))
-      .filter((c) => c.area < AREA_MINIMA)
-      .map((c) => `${c.nome} (${c.hex}) cobre só ${(c.area * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}% da roupa: tire da paleta`);
-    if (infimas.length) aviso = [aviso, ...infimas].filter(Boolean).join('; ');
+    // Paleta escrita à mão nunca é alterada: cor ínfima ou de traço só gera aviso.
+    const medidas = await medirPaleta(croqui, paleta);
+    const problemas = paleta.flatMap((c, i) => {
+      const m = medidas[i];
+      if (ehPrincipal(m)) return [];
+      if (m.area < AREA_MINIMA) {
+        const pct = (m.area * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 });
+        return [`${c.nome} (${c.hex}) cobre só ${pct}% da roupa: tire da paleta`];
+      }
+      return [`${c.nome} (${c.hex}) só aparece em traços e contornos: tire da paleta`];
+    });
+    if (problemas.length) aviso = [aviso, ...problemas].filter(Boolean).join('; ');
   }
 
   const mascaras = [];

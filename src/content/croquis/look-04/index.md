@@ -8,8 +8,4 @@ paleta:
     nome: Vermelho
   - hex: "#1176bd"
     nome: Azul
-  - hex: "#1a3d5a"
-    nome: Azul-marinho
-  - hex: "#682828"
-    nome: Vinho
 ---

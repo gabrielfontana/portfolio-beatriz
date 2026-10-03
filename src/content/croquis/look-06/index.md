@@ -6,10 +6,6 @@ alt: Croqui de macaquinho amarelo com alças de laço e pespontos, bolsa azul tr
 paleta:
   - hex: "#f4bf58"
     nome: Amarelo
-  - hex: "#b07e26"
-    nome: Mostarda
   - hex: "#c6363c"
     nome: Vermelho
-  - hex: "#105281"
-    nome: Azul
 ---

@@ -8,6 +8,4 @@ paleta:
     nome: Azul-claro
   - hex: "#0b0a09"
     nome: Preto
-  - hex: "#434941"
-    nome: Verde-oliva
 ---

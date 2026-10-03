@@ -6,8 +6,6 @@ alt: Croqui de jaqueta e minissaia jeans com bolsos em forma de coração e bols
 paleta:
   - hex: "#1375b9"
     nome: Azul
-  - hex: "#193a55"
-    nome: Azul-marinho
   - hex: "#0d0a0a"
     nome: Preto
   - hex: "#aa2d33"
