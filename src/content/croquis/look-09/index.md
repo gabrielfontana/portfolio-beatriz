@@ -8,8 +8,6 @@ paleta:
     nome: Vermelho
   - hex: "#e2b9b9"
     nome: Rosa-claro
-  - hex: "#832023"
-    nome: Vinho
   - hex: "#130d0b"
     nome: Preto
 ---

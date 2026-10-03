@@ -161,7 +161,36 @@ export function nomearCor(lab: Lab): string {
   return 'Roxo';
 }
 
-/** Sugere de 3 a 4 cores de roupa a partir dos pixels de um croqui. */
+/** Uma cor da paleta precisa cobrir ao menos esta fração da roupa; abaixo disso é ínfima. */
+export const AREA_MINIMA = 0.05;
+
+/**
+ * Fração da roupa (sem fundo e pele) coberta por cada cor da paleta. Cada pixel conta para a
+ * cor mais próxima, se estiver perto o bastante para entrar na máscara dela.
+ */
+export function areasDasCores(pixels: RGB[], hexes: string[], limite = 18): number[] {
+  const alvos = hexes.map((h) => rgbParaLab(hexParaRgb(h)));
+  const contagem = alvos.map(() => 0);
+  for (const p of pixels) {
+    if (ehPele(p)) continue;
+    const lab = rgbParaLab(p);
+    if (ehFundo(lab)) continue;
+    let melhor = -1;
+    let menor = limite;
+    alvos.forEach((a, i) => {
+      const d = deltaE(lab, a);
+      if (d < menor) {
+        menor = d;
+        melhor = i;
+      }
+    });
+    if (melhor >= 0) contagem[melhor]++;
+  }
+  const soma = contagem.reduce((a, b) => a + b, 0);
+  return contagem.map((c) => (soma ? c / soma : 0));
+}
+
+/** Sugere de 2 a 4 cores principais de roupa a partir dos pixels de um croqui. */
 export function sugerirPaleta(pixels: RGB[]): { cores: CorPaleta[]; aviso?: string } {
   const roupa = pixels.filter((p) => !ehPele(p)).map(rgbParaLab).filter((l) => !ehFundo(l));
   if (roupa.length === 0) return { cores: [], aviso: 'nenhuma cor de roupa encontrada; escreva a paleta à mão' };
@@ -175,8 +204,11 @@ export function sugerirPaleta(pixels: RGB[]): { cores: CorPaleta[]; aviso?: stri
     if (escolhidos.some((e) => deltaE(e.centro, g.centro) < 25)) continue;
     escolhidos.push(g);
   }
-  const cores = escolhidos.map((g) => ({ hex: rgbParaHex(labParaRgb(g.centro)), nome: nomearCor(g.centro) }));
-  if (cores.length < 3) {
+  const candidatas = escolhidos.map((g) => ({ hex: rgbParaHex(labParaRgb(g.centro)), nome: nomearCor(g.centro) }));
+  // Mede cada candidata do mesmo jeito que as paletas escritas à mão e descarta as ínfimas.
+  const areas = areasDasCores(pixels, candidatas.map((c) => c.hex));
+  const cores = candidatas.filter((_, i) => areas[i] >= AREA_MINIMA);
+  if (cores.length < 2) {
     return { cores, aviso: `só ${cores.length} cor(es) encontrada(s); escreva a paleta à mão` };
   }
   return { cores };

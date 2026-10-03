@@ -6,8 +6,6 @@ alt: Croqui de vestido curto azul-claro frente única com recortes laterais e de
 paleta:
   - hex: "#cbe1f9"
     nome: Azul-claro
-  - hex: "#608ab5"
-    nome: Azul
   - hex: "#0b0a09"
     nome: Preto
   - hex: "#434941"

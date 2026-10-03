@@ -5,7 +5,7 @@ import { parse } from 'yaml';
 import { existsSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { hexParaRgb, pertenceACor, rgbParaLab, sugerirPaleta } from '../src/lib/paleta.ts';
+import { AREA_MINIMA, areasDasCores, hexParaRgb, pertenceACor, rgbParaLab, sugerirPaleta } from '../src/lib/paleta.ts';
 import { chaveDaCor } from '../src/lib/croquis.ts';
 
 const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---/;
@@ -51,6 +51,18 @@ async function lerPixels(arquivo, largura) {
   return { data, info };
 }
 
+function paraRgb(data) {
+  const pixels = [];
+  for (let i = 0; i < data.length; i += 3) pixels.push([data[i], data[i + 1], data[i + 2]]);
+  return pixels;
+}
+
+/** Fração da roupa coberta por cada cor da paleta, na mesma resolução das máscaras. */
+export async function medirAreas(arquivoCroqui, paleta) {
+  const { data } = await lerPixels(arquivoCroqui, LARGURA_MASCARA);
+  return areasDasCores(paraRgb(data), paleta.map((c) => c.hex));
+}
+
 export async function gerarMascara(arquivoCroqui, hex, destino) {
   const { data, info } = await lerPixels(arquivoCroqui, LARGURA_MASCARA);
   const alvo = rgbParaLab(hexParaRgb(hex));
@@ -74,15 +86,23 @@ export async function processarLook(pasta) {
 
   if (!paleta) {
     const { data } = await lerPixels(croqui, LARGURA_ANALISE);
-    const pixels = [];
-    for (let i = 0; i < data.length; i += 3) pixels.push([data[i], data[i + 1], data[i + 2]]);
-    const sugestao = sugerirPaleta(pixels);
+    const sugestao = sugerirPaleta(paraRgb(data));
     aviso = sugestao.aviso;
     if (sugestao.cores.length >= 3) {
       paleta = sugestao.cores;
       writeFileSync(arquivoMd, inserirPaleta(md, paleta));
       criada = true;
     }
+  }
+
+  if (paleta) {
+    // Paleta escrita à mão nunca é alterada: cor ínfima só gera aviso.
+    const areas = await medirAreas(croqui, paleta);
+    const infimas = paleta
+      .map((c, i) => ({ ...c, area: areas[i] }))
+      .filter((c) => c.area < AREA_MINIMA)
+      .map((c) => `${c.nome} (${c.hex}) cobre só ${(c.area * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}% da roupa: tire da paleta`);
+    if (infimas.length) aviso = [aviso, ...infimas].filter(Boolean).join('; ');
   }
 
   const mascaras = [];

@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import sharp from 'sharp';
 import { parse } from 'yaml';
-import { processarLook, lerPaleta, inserirPaleta } from '../../scripts/gerar-paletas.mjs';
+import { processarLook, lerPaleta, inserirPaleta, medirAreas } from '../../scripts/gerar-paletas.mjs';
 
 const MD = '---\ntitulo: Look 99\nordem: 99\nimagem: ./croqui.png\nalt: Teste\n---\n';
 
@@ -69,6 +69,21 @@ describe('processarLook', () => {
     expect(readFileSync(join(pasta, 'index.md'), 'utf8')).toBe(manual);
     expect(r.mascaras).toEqual(['mascara-bf343a.png', 'mascara-0f74ba.png', 'mascara-2b2626.png']);
     expect(existsSync(join(pasta, 'mascara-bf343a.png'))).toBe(true);
+  });
+
+  it('avisa (sem alterar) quando uma cor escrita à mão é ínfima no desenho', async () => {
+    const pasta = await criarLook();
+    const manual = `${MD.slice(0, -4)}paleta:\n  - hex: "#bf343a"\n    nome: Vermelho\n  - hex: "#0f74ba"\n    nome: Azul\n  - hex: "#2e8b57"\n    nome: Verde\n---\n`;
+    writeFileSync(join(pasta, 'index.md'), manual);
+    const r = await processarLook(pasta);
+    expect(readFileSync(join(pasta, 'index.md'), 'utf8')).toBe(manual);
+    expect(r.aviso).toBe('Verde (#2e8b57) cobre só 0% da roupa: tire da paleta');
+  });
+
+  it('medirAreas dá a fração da roupa de cada cor do croqui', async () => {
+    const pasta = await criarLook();
+    const areas = await medirAreas(join(pasta, 'croqui.png'), [{ hex: '#bf343a' }, { hex: '#0f74ba' }, { hex: '#2b2626' }]);
+    expect(areas.map((a: number) => Number(a.toFixed(2)))).toEqual([0.45, 0.3, 0.25]);
   });
 
   it('apaga máscaras de cores que saíram da paleta', async () => {

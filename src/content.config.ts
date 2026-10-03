@@ -69,8 +69,8 @@ const croquis = defineCollection({
       alt: z.string().min(1, 'Descreva o croqui (texto alternativo)'),
       paleta: z
         .array(z.object({ hex: corHex, nome: z.string().min(1) }))
-        .min(3, 'A paleta precisa de 3 a 4 cores')
-        .max(4, 'A paleta precisa de 3 a 4 cores')
+        .min(2, 'A paleta precisa de 2 a 4 cores principais')
+        .max(4, 'A paleta precisa de 2 a 4 cores principais')
         .optional(),
     }),
 });
