@@ -1,0 +1,42 @@
+---
+import type { ImageMetadata } from 'astro';
+import { getCollection } from 'astro:content';
+import Revista from '../layouts/Revista.astro';
+import LineUpCroquis from '../components/LineUpCroquis.astro';
+import { faixaDaColecao, resolverMascaras } from '../lib/croquis';
+
+const mapa = import.meta.glob<ImageMetadata>('/src/content/croquis/*/mascara-*.png', { eager: true, import: 'default' });
+const looks = (await getCollection('croquis')).sort((a, b) => a.data.ordem - b.data.ordem);
+const preparados = looks.map((l) => ({
+  id: l.id,
+  titulo: l.data.titulo,
+  alt: l.data.alt,
+  imagem: l.data.imagem,
+  cores: resolverMascaras(l.id, l.data.paleta, mapa),
+}));
+const faixa = faixaDaColecao(looks.map((l) => l.data));
+---
+<Revista
+  titulo="Croquis"
+  descricao="Prancha de croquis de Beatriz: nove looks desenhados à mão, com a paleta de cores de cada um."
+  imagemOg={looks[0]?.data.imagem}
+>
+  <header class="container croquis-topo">
+    <p class="kicker">Prancha de coleção</p>
+    <h1 data-anim="revelar">Croquis</h1>
+    <p class="croquis-topo__linha">
+      Nove looks, um mesmo coração. Toque numa cor para ver onde ela vive em cada desenho.
+    </p>
+  </header>
+  <div class="faixa" aria-hidden="true">
+    {faixa.map((hex) => <span style={`--cor: ${hex}`}></span>)}
+  </div>
+  <LineUpCroquis looks={preparados} />
+</Revista>
+
+<style>
+  .croquis-topo { padding-block: 3rem 1.5rem; }
+  .croquis-topo__linha { max-width: 48ch; font-size: 1.15rem; margin-top: 1rem; }
+  .faixa { display: flex; height: 18px; margin-bottom: 1rem; }
+  .faixa span { flex: 1; background: var(--cor); }
+</style>

@@ -1,0 +1,86 @@
+---
+import type { ImageMetadata } from 'astro';
+import { getImage } from 'astro:assets';
+import AmostraCor from './AmostraCor.astro';
+import type { CorDaPaleta } from '../lib/croquis';
+
+interface Props {
+  id: string;
+  titulo: string;
+  alt: string;
+  imagem: ImageMetadata;
+  cores: Array<CorDaPaleta & { chave: string; mascara: ImageMetadata }>;
+}
+const { id, titulo, alt, imagem, cores } = Astro.props;
+// Base e camadas de realce usam o MESMO arquivo, para baixar uma vez só.
+const base = await getImage({ src: imagem, width: Math.min(800, imagem.width), format: 'webp' });
+const mascaras = await Promise.all(cores.map((c) => getImage({ src: c.mascara, format: 'png' })));
+---
+<article class="croqui" id={id} data-croqui>
+  <p class="croqui__rotulo">{titulo}</p>
+  <div class="croqui__palco" style={`aspect-ratio: ${imagem.width} / ${imagem.height}`}>
+    <img
+      class="croqui__base"
+      src={base.src}
+      alt={alt}
+      width={base.attributes.width}
+      height={base.attributes.height}
+      loading="lazy"
+      decoding="async"
+    />
+    {cores.map((c, i) => (
+      <img
+        class="croqui__realce"
+        data-realce={c.chave}
+        src={base.src}
+        alt=""
+        aria-hidden="true"
+        loading="lazy"
+        decoding="async"
+        style={`--mascara: url(${mascaras[i].src})`}
+      />
+    ))}
+  </div>
+  <ul class="croqui__paleta" aria-label={`Paleta do ${titulo}`}>
+    {cores.map((c) => (
+      <li><AmostraCor hex={c.hex} nome={c.nome} chave={c.chave} titulo={titulo} /></li>
+    ))}
+  </ul>
+</article>
+
+<script>
+  import '../scripts/destaque-cor.ts';
+</script>
+
+<style>
+  .croqui { display: grid; gap: 0.75rem; align-content: end; }
+  .croqui__rotulo {
+    margin: 0; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase;
+  }
+  /* multiply: o branco do papel do desenho some no creme do site. */
+  .croqui__palco { position: relative; width: 100%; mix-blend-mode: multiply; transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s; }
+  .croqui__base, .croqui__realce {
+    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill;
+  }
+  .croqui__base { transition: filter 0.3s, opacity 0.3s; }
+  .croqui__palco[data-destacando] .croqui__base { filter: grayscale(1); opacity: 0.35; }
+  .croqui__realce {
+    pointer-events: none; opacity: 0; transition: opacity 0.3s;
+    -webkit-mask-image: var(--mascara); mask-image: var(--mascara);
+    -webkit-mask-size: 100% 100%; mask-size: 100% 100%;
+    -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+  }
+  .croqui__realce.ativo { opacity: 1; }
+  .croqui__paleta { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); gap: 0.25rem; }
+
+  /* Modos do line-up (classes postas pelo módulo de animação). */
+  :global(.lineup--desfile) .croqui__palco { height: 58vh; width: auto; }
+  :global(.lineup--desfile) .croqui:not([data-em-foco]) .croqui__palco,
+  :global(.lineup--carrossel) .croqui:not([data-em-foco]) .croqui__palco { opacity: 0.5; }
+  :global(.lineup--desfile) .croqui[data-em-foco] .croqui__palco { transform: scale(1.08); transform-origin: bottom center; }
+  .croqui[data-em-foco] .croqui__rotulo { color: var(--vermelho-texto); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .croqui__palco, .croqui__base, .croqui__realce { transition: none; }
+  }
+</style>

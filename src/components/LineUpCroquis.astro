@@ -1,0 +1,41 @@
+---
+import type { ImageMetadata } from 'astro';
+import CroquiCard from './CroquiCard.astro';
+import type { CorDaPaleta } from '../lib/croquis';
+
+interface Look {
+  id: string;
+  titulo: string;
+  alt: string;
+  imagem: ImageMetadata;
+  cores: Array<CorDaPaleta & { chave: string; mascara: ImageMetadata }>;
+}
+interface Props {
+  looks: Look[];
+}
+const { looks } = Astro.props;
+---
+<section class="lineup" data-anim="lineup" aria-label="Line-up de croquis">
+  <div class="lineup__trilho">
+    {looks.map((l) => <CroquiCard {...l} />)}
+  </div>
+</section>
+
+<style>
+  /* Fundo próprio: o <main> isola a mistura (view-transition), e o multiply dos croquis precisa do creme atrás. */
+  .lineup { padding-block: 2rem 4rem; background: var(--papel); }
+  .lineup__trilho {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 3rem 2rem;
+    width: min(100% - 2 * var(--gutter), var(--max)); margin-inline: auto;
+  }
+  .lineup--desfile { height: 100vh; overflow: hidden; display: flex; align-items: center; padding-block: 0; }
+  .lineup--desfile .lineup__trilho {
+    display: flex; align-items: flex-end; gap: 4vw; width: max-content; margin: 0; padding-inline: 12vw;
+  }
+  .lineup--desfile .lineup__trilho > :global(*) { width: auto; }
+  .lineup--carrossel .lineup__trilho {
+    display: flex; gap: 1.5rem; width: 100%; margin: 0; padding: 0 11vw 1rem;
+    overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none;
+  }
+  .lineup--carrossel .lineup__trilho > :global(*) { flex: 0 0 78vw; scroll-snap-align: center; }
+</style>
