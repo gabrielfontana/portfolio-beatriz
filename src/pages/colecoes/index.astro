@@ -1,0 +1,43 @@
+---
+import { getCollection } from 'astro:content';
+import Revista from '../../layouts/Revista.astro';
+import CardColecao from '../../components/CardColecao.astro';
+import { ordenarColecoes, pecasDaColecao, pecaDeCapa } from '../../lib/colecoes';
+
+const colecoes = ordenarColecoes(await getCollection('colecoes'));
+const pecas = await getCollection('pecas');
+const cards = colecoes.map((c) => {
+  const daColecao = pecasDaColecao(pecas, c.id);
+  return { colecao: c, total: daColecao.length, capa: pecaDeCapa(daColecao) };
+});
+---
+<Revista titulo="Coleções" descricao="Sumário das coleções autorais de Beatriz.">
+  <header class="container sumario-topo">
+    <p class="kicker">Sumário</p>
+    <h1 data-anim="revelar">Coleções</h1>
+  </header>
+  <div class="container sumario">
+    {cards.map(({ colecao, total, capa }) => (
+      <CardColecao
+        href={`/colecoes/${colecao.id}`}
+        nome={colecao.data.nome}
+        ano={colecao.data.ano}
+        resumo={colecao.data.resumo}
+        cor={colecao.data.cor}
+        capa={capa?.data.capa}
+        capaAlt={capa?.data.capaAlt}
+        total={total}
+      />
+    ))}
+  </div>
+</Revista>
+
+<style>
+  .sumario-topo { padding-block: 3rem 2rem; border-bottom: 2px solid var(--tinta); margin-bottom: 3rem; }
+  .sumario { display: grid; gap: 4rem; }
+  @media (min-width: 768px) {
+    .sumario { grid-template-columns: repeat(12, 1fr); row-gap: 6rem; }
+    .sumario > :global(:nth-child(odd)) { grid-column: 1 / span 7; }
+    .sumario > :global(:nth-child(even)) { grid-column: 6 / -1; }
+  }
+</style>
