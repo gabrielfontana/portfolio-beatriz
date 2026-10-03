@@ -34,6 +34,7 @@ async function iniciar() {
     import('./parallax'),
     import('./processo'),
     import('./linha'),
+    import('./lineup'),
   ]);
   if (meuCiclo !== ciclo) return; // outra navegação começou enquanto carregava
 

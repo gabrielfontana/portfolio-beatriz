@@ -103,3 +103,43 @@ test('o menu leva à página de croquis', async ({ page }) => {
     page.getByRole('navigation', { name: 'Principal' }).getByRole('link', { name: 'Croquis' }),
   ).toHaveAttribute('href', '/croquis');
 });
+
+const numeroEmFoco = (page: Page) =>
+  page.locator('[data-croqui][data-em-foco] .croqui__rotulo').textContent().then((t) => Number(t?.replace(/\D/g, '')));
+
+test('desktop: a fila desfila com a rolagem e o look em foco muda', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'no celular é carrossel');
+  await page.goto('/croquis');
+  await expect(page.locator('html')).toHaveAttribute('data-animacoes', 'ativas');
+  await expect(page.locator('section.lineup')).toHaveClass(/lineup--desfile/);
+  await page.locator('section.lineup').evaluate((el) => window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY));
+  await expect(page.locator('[data-croqui][data-em-foco]')).toHaveCount(1);
+  const inicio = await numeroEmFoco(page);
+  await page.evaluate(() => window.scrollBy(0, 4000));
+  await expect.poll(() => numeroEmFoco(page)).toBeGreaterThan(inicio);
+});
+
+test('celular: deslizar o carrossel troca o look em foco', async ({ page, isMobile }) => {
+  test.skip(!isMobile, 'no desktop é desfile');
+  await page.goto('/croquis');
+  await expect(page.locator('html')).toHaveAttribute('data-animacoes', 'ativas');
+  await expect(page.locator('section.lineup')).toHaveClass(/lineup--carrossel/);
+  await page.locator('.lineup__trilho').scrollIntoViewIfNeeded();
+  await expect.poll(() => numeroEmFoco(page)).toBe(1);
+  await page.locator('.lineup__trilho').evaluate((el) => el.scrollTo({ left: el.scrollWidth }));
+  await expect.poll(() => numeroEmFoco(page)).toBe(9);
+});
+
+test('navegar e voltar não acumula gatilhos do desfile', async ({ page }) => {
+  await page.goto('/croquis');
+  const html = page.locator('html');
+  await expect(html).toHaveAttribute('data-animacoes', 'ativas');
+  const gatilhos = await html.getAttribute('data-gatilhos');
+  await page.getByRole('navigation', { name: 'Principal' }).getByRole('link', { name: 'Coleções' }).click();
+  await expect(page).toHaveURL(/\/colecoes$/);
+  await page.goBack();
+  await expect(page).toHaveURL(/\/croquis$/);
+  await expect(html).toHaveAttribute('data-animacoes-ciclo', '3');
+  await expect(html).toHaveAttribute('data-gatilhos', gatilhos!);
+  await expect(page.locator('[data-croqui][data-em-foco]')).toHaveCount(1);
+});
