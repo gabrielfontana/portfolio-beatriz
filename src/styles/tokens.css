@@ -3,10 +3,12 @@
   --tinta: #141414;
   --rosa: #ff2e88;
   --vermelho: #e10600;
+  /* Vermelho para texto pequeno: o #e10600 tem só 4,35:1 sobre o papel (AA pede 4,5:1). */
+  --vermelho-texto: #c00000;
   --cobalto: #0047ab;
   --amarelo: #ffd400;
-  --fonte-display: 'Bodoni Moda', 'Didot', 'Bodoni MT', serif;
-  --fonte-texto: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --fonte-display: 'Bodoni Moda Variable', 'Didot', 'Bodoni MT', serif;
+  --fonte-texto: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --gutter: clamp(16px, 4vw, 48px);
   --max: 1280px;
 }
