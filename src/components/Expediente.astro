@@ -1,0 +1,52 @@
+---
+import site from '../data/site.json';
+import { linkWhatsApp, linkInstagram } from '../lib/contato';
+
+const c = site.contatos;
+const ano = new Date().getFullYear();
+---
+<footer id="expediente" class="expediente">
+  <div class="container expediente__grade">
+    <div>
+      <p class="kicker">Expediente</p>
+      <p class="expediente__titulo">Vamos conversar?</p>
+      <p>Encomendas, colaborações e oportunidades de trabalho.</p>
+    </div>
+    <ul class="expediente__contatos">
+      <li>
+        <span class="kicker">WhatsApp</span>
+        <a href={linkWhatsApp(c.whatsapp, c.mensagemWhatsApp)} target="_blank" rel="noopener">{c.whatsapp}</a>
+      </li>
+      <li>
+        <span class="kicker">E-mail</span>
+        <a href={`mailto:${c.email}`}>{c.email}</a>
+      </li>
+      <li>
+        <span class="kicker">Instagram</span>
+        <a href={linkInstagram(c.instagram)} target="_blank" rel="noopener">{c.instagram}</a>
+      </li>
+    </ul>
+    <p class="expediente__credito">Direção criativa, modelagem, corte e costura: {site.nome}. © {ano}</p>
+  </div>
+</footer>
+
+<style>
+  .expediente { background: var(--tinta); color: var(--papel); padding-block: 4rem 2rem; margin-top: 6rem; }
+  .expediente__grade { display: grid; gap: 2.5rem; }
+  .expediente__titulo {
+    font-family: var(--fonte-display); font-style: italic;
+    font-size: clamp(2.5rem, 8vw, 5rem); line-height: 1; margin: 0.5rem 0 1rem;
+  }
+  .expediente__contatos { list-style: none; margin: 0; padding: 0; display: grid; gap: 1.25rem; }
+  .expediente__contatos li { display: grid; gap: 0.25rem; }
+  .expediente__contatos a {
+    color: var(--rosa); font-family: var(--fonte-display); font-size: clamp(1.25rem, 3vw, 1.75rem);
+    text-decoration: none; overflow-wrap: anywhere;
+  }
+  .expediente__contatos a:hover { text-decoration: underline; }
+  .expediente__credito { font-size: 0.8rem; opacity: 0.75; border-top: 1px solid currentColor; padding-top: 1rem; margin: 0; }
+  @media (min-width: 768px) {
+    .expediente__grade { grid-template-columns: 1.2fr 1fr; }
+    .expediente__credito { grid-column: 1 / -1; }
+  }
+</style>

@@ -1,0 +1,17 @@
+{
+  "nome": "Beatriz",
+  "titulo": "Beatriz · Modelista",
+  "descricao": "Portfólio de Beatriz, modelista: croquis, moldes, corte, costura e peças autorais.",
+  "edicao": "Edição nº 01 · 2026",
+  "contatos": {
+    "whatsapp": "(11) 90000-0000",
+    "email": "beatriz@exemplo.com",
+    "instagram": "@beatriz.modelista",
+    "mensagemWhatsApp": "Olá, Beatriz! Vi seu portfólio e gostaria de conversar."
+  },
+  "chamadas": [
+    { "texto": "Do croqui à costura: a anatomia de uma peça", "href": "/processo" },
+    { "texto": "As coleções da temporada", "href": "/colecoes" },
+    { "texto": "Entrevista exclusiva: quem é a modelista", "href": "/sobre" }
+  ]
+}

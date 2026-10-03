@@ -1,19 +1,41 @@
 ---
 import '../styles/tokens.css';
 import '../styles/global.css';
+import type { ImageMetadata } from 'astro';
 import { ClientRouter } from 'astro:transitions';
+import { getImage } from 'astro:assets';
+import Navegacao from '../components/Navegacao.astro';
+import Expediente from '../components/Expediente.astro';
+import ogPadrao from '../assets/og-padrao.jpg';
+import site from '../data/site.json';
 
 interface Props {
-  titulo: string;
+  titulo?: string;
+  descricao?: string;
+  imagemOg?: ImageMetadata;
 }
-const { titulo } = Astro.props;
+const { titulo, descricao = site.descricao, imagemOg = ogPadrao } = Astro.props;
+const tituloCompleto = titulo ? `${titulo} · ${site.titulo}` : site.titulo;
+const og = await getImage({ src: imagemOg, width: 1200, format: 'jpg' });
+const ogUrl = new URL(og.src, Astro.site).href;
+const canonical = new URL(Astro.url.pathname, Astro.site).href;
 ---
 <!doctype html>
 <html lang="pt-BR">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{titulo}</title>
+    <title>{tituloCompleto}</title>
+    <meta name="description" content={descricao} />
+    <link rel="canonical" href={canonical} />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="pt_BR" />
+    <meta property="og:site_name" content={site.titulo} />
+    <meta property="og:title" content={tituloCompleto} />
+    <meta property="og:description" content={descricao} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogUrl} />
+    <meta name="twitter:card" content="summary_large_image" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -25,8 +47,10 @@ const { titulo } = Astro.props;
   </head>
   <body>
     <a class="pular" href="#conteudo">Pular para o conteúdo</a>
+    <Navegacao />
     <main id="conteudo">
       <slot />
     </main>
+    <Expediente />
   </body>
 </html>
