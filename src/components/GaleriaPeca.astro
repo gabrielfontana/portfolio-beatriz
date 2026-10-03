@@ -1,0 +1,67 @@
+---
+import type { ImageMetadata } from 'astro';
+import { Image, getImage } from 'astro:assets';
+
+interface Props {
+  titulo: string;
+  imagens: { src: ImageMetadata; alt: string }[];
+}
+const { titulo, imagens } = Astro.props;
+const ampliadas = await Promise.all(imagens.map((i) => getImage({ src: i.src, width: 1600 })));
+---
+<section class="galeria container" aria-label={`Galeria de fotos: ${titulo}`}>
+  <ul class="galeria__grade">
+    {imagens.map((img, i) => (
+      <li data-anim="revelar">
+        <button type="button" class="galeria__item" data-ampliar={ampliadas[i].src} data-alt={img.alt} aria-label={`Ampliar foto: ${img.alt}`}>
+          <Image src={img.src} alt="" widths={[360, 600, 900]} sizes="(min-width: 768px) 33vw, 50vw" />
+        </button>
+      </li>
+    ))}
+  </ul>
+  <dialog class="lightbox" aria-label="Foto ampliada">
+    <form method="dialog">
+      <button class="lightbox__fechar" aria-label="Fechar foto ampliada">×</button>
+    </form>
+    <img class="lightbox__img" alt="" />
+  </dialog>
+</section>
+
+<script>
+  // Delegação no document: funciona em todas as páginas mesmo com o ClientRouter trocando o DOM.
+  document.addEventListener('click', (evento) => {
+    const alvo = evento.target as HTMLElement;
+    const botao = alvo.closest<HTMLButtonElement>('[data-ampliar]');
+    if (botao) {
+      const dialogo = document.querySelector<HTMLDialogElement>('dialog.lightbox');
+      const img = dialogo?.querySelector<HTMLImageElement>('.lightbox__img');
+      if (!dialogo || !img) return;
+      img.src = botao.dataset.ampliar ?? '';
+      img.alt = botao.dataset.alt ?? '';
+      dialogo.showModal();
+      return;
+    }
+    // Clique no fundo escuro (fora da foto) fecha.
+    if (alvo instanceof HTMLDialogElement && alvo.classList.contains('lightbox')) alvo.close();
+  });
+</script>
+
+<style>
+  .galeria { padding-block: 3rem; }
+  .galeria__grade { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+  .galeria__item { display: block; width: 100%; padding: 0; border: 0; background: none; cursor: zoom-in; overflow: hidden; aspect-ratio: 3 / 4; }
+  .galeria__item :global(img) { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s; }
+  .galeria__item:hover :global(img) { transform: scale(1.05); }
+  .lightbox { padding: 0; border: 0; background: transparent; max-width: 92vw; max-height: 92vh; overflow: visible; }
+  .lightbox::backdrop { background: rgb(20 20 20 / 0.9); }
+  .lightbox__img { max-width: 92vw; max-height: 88vh; width: auto; object-fit: contain; }
+  .lightbox__fechar {
+    position: absolute; top: -0.75rem; right: -0.75rem;
+    width: 2.75rem; height: 2.75rem; border-radius: 50%; border: 0;
+    background: var(--rosa); color: var(--tinta); font-size: 1.75rem; line-height: 1; cursor: pointer;
+  }
+  @media (min-width: 768px) {
+    .galeria__grade { grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+    .galeria__grade > li:nth-child(3n + 2) { margin-top: 3rem; }
+  }
+</style>
