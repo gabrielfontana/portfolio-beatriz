@@ -50,7 +50,7 @@ describe('processarLook', () => {
     const pasta = await criarLook();
     const r = await processarLook(pasta);
     expect(r.criada).toBe(true);
-    expect(r.paleta.map((c) => c.nome)).toEqual(['Vermelho', 'Azul', 'Preto']);
+    expect(r.paleta.map((c: { nome: string }) => c.nome)).toEqual(['Vermelho', 'Azul', 'Preto']);
     expect(lerPaleta(readFileSync(join(pasta, 'index.md'), 'utf8'))).toEqual(r.paleta);
     for (const nome of r.mascaras) expect(existsSync(join(pasta, nome))).toBe(true);
     const vermelho = join(pasta, `mascara-${r.paleta[0].hex.slice(1)}.png`);
