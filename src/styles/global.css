@@ -46,3 +46,15 @@ h3 { font-size: clamp(1.4rem, 2.5vw, 2rem); }
   transition: background 0.2s, color 0.2s;
 }
 .botao:hover { background: var(--rosa); color: var(--tinta); }
+
+@keyframes virar-sai { to { opacity: 0; transform: perspective(1400px) rotateY(16deg) translateX(-6%); } }
+@keyframes virar-entra { from { opacity: 0; transform: perspective(1400px) rotateY(-12deg) translateX(8%); } }
+@keyframes virar-sai-volta { to { opacity: 0; transform: perspective(1400px) rotateY(-16deg) translateX(6%); } }
+@keyframes virar-entra-volta { from { opacity: 0; transform: perspective(1400px) rotateY(12deg) translateX(-8%); } }
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) { animation: none !important; }
+  *, *::before, *::after { transition-duration: 0.01ms !important; }
+}

@@ -8,6 +8,7 @@ import Navegacao from '../components/Navegacao.astro';
 import Expediente from '../components/Expediente.astro';
 import ogPadrao from '../assets/og-padrao.jpg';
 import site from '../data/site.json';
+import { virada } from '../scripts/virada';
 
 interface Props {
   titulo?: string;
@@ -48,9 +49,12 @@ const canonical = new URL(Astro.url.pathname, Astro.site).href;
   <body>
     <a class="pular" href="#conteudo">Pular para o conteúdo</a>
     <Navegacao />
-    <main id="conteudo">
+    <main id="conteudo" transition:animate={virada}>
       <slot />
     </main>
     <Expediente />
+    <script>
+      import '../scripts/animacoes/index.ts';
+    </script>
   </body>
 </html>
