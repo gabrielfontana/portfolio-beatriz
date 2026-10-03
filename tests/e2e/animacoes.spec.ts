@@ -27,7 +27,10 @@ test('navegar e voltar reinicia as animações sem acumular gatilhos nem erros',
   await page.goto('/');
   const html = page.locator('html');
   await expect(html).toHaveAttribute('data-animacoes-ciclo', '1');
+  // data-gatilhos só existe depois que o GSAP carregou e iniciou ('ativas').
+  await expect(html).toHaveAttribute('data-animacoes', 'ativas');
   const gatilhosIniciais = await html.getAttribute('data-gatilhos');
+  expect(gatilhosIniciais).not.toBeNull();
 
   await page.getByRole('navigation', { name: 'Principal' }).getByRole('link', { name: 'Coleções' }).click();
   await expect(page).toHaveURL(/\/colecoes$/);
