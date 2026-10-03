@@ -41,3 +41,11 @@ test('navegar e voltar reinicia as animações sem acumular gatilhos nem erros',
   await expect(page.locator('[data-letra]').last()).toHaveCSS('opacity', '1');
   expect(erros).toEqual([]);
 });
+
+test('título já visível ao abrir a página não some nem pisca (tela de notebook baixa)', async ({ page, isMobile }) => {
+  if (!isMobile) await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto('/pecas/vestido-aurora');
+  await expect(page.locator('html')).toHaveAttribute('data-animacoes', 'ativas');
+  const h1 = page.getByRole('heading', { level: 1 });
+  expect(await h1.evaluate((el) => getComputedStyle(el).opacity)).toBe('1');
+});

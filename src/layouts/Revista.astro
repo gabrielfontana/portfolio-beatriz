@@ -20,7 +20,11 @@ interface Props {
 }
 const { titulo, descricao = site.descricao, imagemOg = ogPadrao } = Astro.props;
 const tituloCompleto = titulo ? `${titulo} · ${site.titulo}` : site.titulo;
-const og = await getImage({ src: imagemOg, width: 1200, format: 'jpg' });
+// Prévia de link: recorte 1,91:1 e leve, porque o WhatsApp ignora imagens pesadas (~300KB).
+// Fotos com menos de 1200px não são ampliadas: reduz a largura e mantém a proporção.
+const ogLargura = Math.min(1200, imagemOg.width);
+const ogAltura = Math.round((ogLargura * 630) / 1200);
+const og = await getImage({ src: imagemOg, width: ogLargura, height: ogAltura, fit: 'cover', format: 'jpg', quality: 70 });
 const ogUrl = new URL(og.src, Astro.site).href;
 const canonical = new URL(Astro.url.pathname, Astro.site).href;
 ---
@@ -39,6 +43,8 @@ const canonical = new URL(Astro.url.pathname, Astro.site).href;
     <meta property="og:description" content={descricao} />
     <meta property="og:url" content={canonical} />
     <meta property="og:image" content={ogUrl} />
+    <meta property="og:image:width" content={String(og.attributes.width)} />
+    <meta property="og:image:height" content={String(og.attributes.height)} />
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <ClientRouter />
