@@ -279,3 +279,57 @@ test('desktop: ir até um look distante é um movimento suave, não um salto', a
   const distintas = new Set(lista.map((y) => Math.round(y))).size;
   expect(distintas, `posições: ${distintas}`).toBeGreaterThan(15);
 });
+
+const pontoAtual = (page: Page) =>
+  page.locator('[data-ponto][aria-current="true"]').getAttribute('data-ponto');
+
+test('bolinhas acima da fila: uma por look, a do look em foco marcada', async ({ page }) => {
+  await abrirDesfile(page);
+  const pontos = page.locator('[data-ponto]');
+  await expect(pontos).toHaveCount(9);
+  await expect(pontos.first()).toBeVisible();
+  await expect(page.locator('[data-ponto][aria-current="true"]')).toHaveCount(1);
+  expect(await pontoAtual(page)).toBe('look-01');
+  // as bolinhas ficam acima dos croquis
+  const yPontos = (await pontos.first().boundingBox())!.y;
+  const yLook = (await page.locator('#look-01 .croqui__palco').boundingBox())!.y;
+  expect(yPontos).toBeLessThan(yLook);
+});
+
+test('tocar numa bolinha leva a fila até aquele look', async ({ page }) => {
+  await abrirDesfile(page);
+  await page.locator('[data-ponto="look-04"]').click();
+  await expect.poll(() => numeroEmFoco(page)).toBe(4);
+  await expect.poll(() => pontoAtual(page)).toBe('look-04');
+  await expect(page.locator('[data-ponto="look-04"]')).toHaveAccessibleName('Ir para o Look 04');
+});
+
+test('celular: deslizar o carrossel move a bolinha marcada', async ({ page, isMobile }) => {
+  test.skip(!isMobile, 'só no carrossel');
+  await abrirDesfile(page);
+  await page.locator('.lineup__trilho').evaluate((el) => el.scrollTo({ left: el.scrollWidth }));
+  await expect.poll(() => pontoAtual(page)).toBe('look-09');
+});
+
+test('com movimento reduzido (grade) não há bolinhas', async ({ page }) => {
+  await abrirGrade(page);
+  await expect(page.locator('[data-ponto]').first()).toBeHidden();
+});
+
+test('desktop em tela baixa: as bolinhas não encostam no look em foco', async ({ context, isMobile }) => {
+  test.skip(isMobile, 'só no desfile');
+  for (const [w, h] of [[1280, 560], [1280, 600], [1366, 650]]) {
+    // aba nova a cada tamanho: reabrir a mesma URL restauraria a rolagem anterior
+    const page = await context.newPage();
+    await page.setViewportSize({ width: w, height: h });
+    await abrirDesfile(page);
+    await page.locator('[data-ponto="look-03"]').click();
+    await expect.poll(() => numeroEmFoco(page)).toBe(3);
+    await filaParada(page);
+    const pontos = (await page.locator('.lineup__pontos').boundingBox())!;
+    const rotulo = (await page.locator('#look-03 .croqui__rotulo').boundingBox())!;
+    const palco = (await page.locator('#look-03 .croqui__palco').boundingBox())!;
+    expect(pontos.y + pontos.height, `${w}x${h}`).toBeLessThanOrEqual(Math.min(rotulo.y, palco.y));
+    await page.close();
+  }
+});

@@ -12,11 +12,14 @@ function focar(cards: HTMLElement[], escolhido: HTMLElement | undefined) {
     c.toggleAttribute('data-em-foco', emFoco);
     c.toggleAttribute('data-travado', !emFoco);
     c.querySelectorAll('[data-amostra]').forEach((b) => b.setAttribute('aria-disabled', String(!emFoco)));
+    document.querySelector(`[data-ponto="${c.id}"]`)?.setAttribute('aria-current', String(emFoco));
     if (!emFoco) soltar(c);
   }
 }
 
 function liberarTudo(secao: HTMLElement) {
+  secao.querySelector<HTMLElement>('.lineup__pontos')?.setAttribute('hidden', '');
+  secao.querySelectorAll('[data-ponto]').forEach((p) => p.removeAttribute('aria-current'));
   secao.querySelectorAll('[data-em-foco]').forEach((c) => c.removeAttribute('data-em-foco'));
   secao.querySelectorAll('[data-travado]').forEach((c) => c.removeAttribute('data-travado'));
   secao.querySelectorAll('[data-amostra]').forEach((b) => b.removeAttribute('aria-disabled'));
@@ -37,9 +40,16 @@ function maisPertoDoCentro(cards: HTMLElement[]): HTMLElement | undefined {
   return melhor;
 }
 
-/** Look fora de foco que recebeu o toque/foco (para trazê-lo ao centro). */
+/** Look fora de foco que recebeu o toque/foco, ou o look da bolinha tocada (para trazê-lo ao centro). */
 function lookTravado(evento: Event): HTMLElement | null {
-  return (evento.target as HTMLElement | null)?.closest<HTMLElement>('[data-croqui][data-travado]') ?? null;
+  const alvo = evento.target as HTMLElement | null;
+  const ponto = alvo?.closest<HTMLElement>('[data-ponto]');
+  if (ponto) return document.getElementById(ponto.dataset.ponto ?? '');
+  return alvo?.closest<HTMLElement>('[data-croqui][data-travado]') ?? null;
+}
+
+function mostrarPontos(secao: HTMLElement) {
+  secao.querySelector<HTMLElement>('.lineup__pontos')?.removeAttribute('hidden');
 }
 
 /**
@@ -58,6 +68,7 @@ export function iniciar(gsap: typeof GSAP): () => void {
       const cards = Array.from(secao.querySelectorAll<HTMLElement>('[data-croqui]'));
       if (!trilho || cards.length === 0) return;
       secao.classList.add('lineup--desfile');
+      mostrarPontos(secao);
       // Margens que deixam o primeiro e o último look chegarem ao centro da tela (e ficarem em foco).
       const respiro = () => {
         const primeiro = cards[0];
@@ -112,6 +123,7 @@ export function iniciar(gsap: typeof GSAP): () => void {
       };
       const aoFocar = (evento: FocusEvent) => {
         semRolagemLateral();
+        if ((evento.target as HTMLElement).closest('[data-ponto]')) return;
         const card = lookTravado(evento);
         if (card) irPara(card);
       };
@@ -152,6 +164,7 @@ export function iniciar(gsap: typeof GSAP): () => void {
       const cards = Array.from(secao.querySelectorAll<HTMLElement>('[data-croqui]'));
       if (!trilho || cards.length === 0) return;
       secao.classList.add('lineup--carrossel');
+      mostrarPontos(secao);
       focar(cards, cards[0]);
       const io = new IntersectionObserver(
         (entradas) => {
@@ -167,10 +180,10 @@ export function iniciar(gsap: typeof GSAP): () => void {
         const t = trilho.getBoundingClientRect();
         trilho.scrollBy({ left: r.left + r.width / 2 - (t.left + t.width / 2), behavior: 'smooth' });
       };
-      trilho.addEventListener('click', aoTocar);
+      secao.addEventListener('click', aoTocar);
       limpezas.push(() => {
         io.disconnect();
-        trilho.removeEventListener('click', aoTocar);
+        secao.removeEventListener('click', aoTocar);
       });
     });
     return () => {

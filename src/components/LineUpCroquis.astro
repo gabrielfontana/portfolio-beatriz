@@ -16,6 +16,13 @@ interface Props {
 const { looks } = Astro.props;
 ---
 <section class="lineup" data-anim="lineup" aria-label="Line-up de croquis">
+  <!-- Como no carrossel do Instagram: uma bolinha por look, a do look em foco marcada.
+       Escondidas na grade (sem JS ou com movimento reduzido), onde não há o que deslizar. -->
+  <div class="lineup__pontos" role="group" aria-label="Looks da prancha" hidden>
+    {looks.map((l) => (
+      <button type="button" class="lineup__ponto" data-ponto={l.id} aria-label={`Ir para o ${l.titulo}`}></button>
+    ))}
+  </div>
   <div class="lineup__trilho">
     {looks.map((l) => <CroquiCard {...l} />)}
   </div>
@@ -29,14 +36,35 @@ const { looks } = Astro.props;
     width: min(100% - 2 * var(--gutter), var(--max)); margin-inline: auto;
     background: var(--papel); /* o transform do desfile também isola a mistura */
   }
-  .lineup--desfile { height: 100vh; overflow: hidden; display: flex; align-items: center; padding-block: 0; }
+  .lineup__pontos { display: flex; justify-content: center; gap: 0.15rem; }
+  .lineup__pontos[hidden] { display: none; }
+  /* Área de toque de 24px; a bolinha é o ::before. */
+  .lineup__ponto {
+    display: grid; place-items: center; width: 1.5rem; height: 1.5rem; padding: 0;
+    border: 0; background: none; cursor: pointer;
+  }
+  .lineup__ponto::before {
+    content: ''; width: 0.5rem; height: 0.5rem; border-radius: 999px; background: var(--tinta); opacity: 0.25;
+    transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s, background-color 0.35s;
+  }
+  .lineup__ponto:hover::before { opacity: 0.55; }
+  .lineup__ponto[aria-current='true']::before { width: 1.4rem; opacity: 1; background: var(--vermelho-texto); }
+  .lineup__ponto[aria-current='true'] { width: 2.2rem; }
+  /* padding-top: menu fixo + bolinhas, para o look em foco (maior) não encostar nelas. */
+  .lineup--desfile { position: relative; height: 100vh; overflow: hidden; display: flex; align-items: center; padding-block: 6rem 0; }
   .lineup--desfile .lineup__trilho {
     display: flex; align-items: flex-end; gap: 4vw; width: max-content; margin: 0; padding: 6vh 12vw 0;
   }
   .lineup--desfile .lineup__trilho > :global(*) { width: auto; }
+  /* Acima da fila, logo abaixo do menu fixo. */
+  .lineup--desfile .lineup__pontos { position: absolute; top: 4.5rem; left: 0; right: 0; z-index: 1; }
+  .lineup--carrossel .lineup__pontos { margin-bottom: 1rem; }
   .lineup--carrossel .lineup__trilho {
     display: flex; gap: 1.5rem; width: 100%; margin: 0; padding: 0 11vw 1rem;
     overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none;
   }
   .lineup--carrossel .lineup__trilho > :global(*) { flex: 0 0 78vw; scroll-snap-align: center; }
+  @media (prefers-reduced-motion: reduce) {
+    .lineup__ponto::before { transition: none; }
+  }
 </style>
