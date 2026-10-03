@@ -32,6 +32,21 @@ Crie `src/content/colecoes/<nome>.md` com `nome`, `cor` (hex **entre aspas**, ex
 - WhatsApp, e-mail, Instagram, edição da capa e chamadas: `src/data/site.json`.
 - Imagem de prévia de link (WhatsApp, redes): `src/assets/og-padrao.jpg` (1200×630). Peças, coleções e a página Sobre usam a própria foto.
 
+## Croquis e paletas
+Cada croqui fica em `src/content/croquis/look-NN/` com `croqui.jpeg` e um `index.md`:
+```md
+---
+titulo: Look 10
+ordem: 10
+imagem: ./croqui.jpeg
+alt: Descrição do desenho para quem não enxerga.
+---
+```
+1. Use nomes de arquivo em minúsculas (`croqui.jpeg`) e fotos em JPG/PNG; HEIC precisa ser convertido.
+2. Rode `npm run paletas`. O script sugere de 3 a 4 cores da roupa (ignora fundo e pele), grava em `paleta:` no `index.md` e gera as máscaras `mascara-*.png` do efeito de destaque.
+3. Não gostou de uma cor? Edite `paleta:` à mão (hex **entre aspas**, ex.: `"#bf343a"`) e rode `npm run paletas` de novo: sua paleta é mantida e só as máscaras são refeitas.
+4. Se esquecer de rodar o script, o build avisa qual look e qual cor precisam dele.
+
 ## Antes de publicar
 ```bash
 npm run build && npm test && npx playwright test

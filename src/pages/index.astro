@@ -11,6 +11,7 @@ const capa = pecaDeCapa(pecas);
 if (!capa) throw new Error('Adicione ao menos uma peça em src/content/pecas para montar a capa.');
 const destaques = pecas.filter((p) => p.id !== capa.id).sort(porRecencia).slice(0, 3);
 const letras = [...site.nome.toUpperCase()];
+const minis = (await getCollection('croquis')).sort((a, b) => a.data.ordem - b.data.ordem).slice(0, 5);
 ---
 <Revista>
   <section class="capa" data-anim="capa">
@@ -56,9 +57,33 @@ const letras = [...site.nome.toUpperCase()];
       </div>
     </section>
   )}
+  {minis.length > 0 && (
+    <section class="container prancha" aria-labelledby="t-prancha">
+      <p class="kicker">Prancha de croquis</p>
+      <h2 id="t-prancha" data-anim="revelar">Do papel para a passarela</h2>
+      <a class="prancha__fila" href="/croquis" aria-label="Abrir a prancha de croquis">
+        {minis.map((m) => (
+          <Image
+            data-croqui-mini
+            src={m.data.imagem}
+            alt=""
+            widths={[160, 240, 320]}
+            sizes="(min-width: 768px) 16vw, 18vw"
+          />
+        ))}
+      </a>
+      <a class="botao" href="/croquis">Ver a prancha completa →</a>
+    </section>
+  )}
 </Revista>
 
 <style>
+  .prancha { padding-block: 3rem; border-top: 2px solid var(--tinta); background: var(--papel); }
+  .prancha h2 { margin-block: 0.5rem 2rem; font-style: italic; }
+  .prancha__fila { display: grid; grid-template-columns: repeat(5, 1fr); gap: clamp(0.5rem, 2vw, 2rem); align-items: end; margin-bottom: 2rem; }
+  .prancha__fila :global(img) { width: 100%; height: auto; mix-blend-mode: multiply; transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+  .prancha__fila:hover :global(img) { transform: translateY(-6px); }
+  .prancha__fila:hover :global(img:nth-child(even)) { transform: translateY(6px); }
   .capa { padding-block: 1.25rem 3rem; overflow: hidden; }
   .capa__topo {
     display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem 1rem;

@@ -31,3 +31,10 @@ test('o nome gigante não causa rolagem horizontal', async ({ page }) => {
   const cabe = await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
   expect(cabe).toBe(true);
 });
+
+test('capa mostra a prancha de croquis com link para a página', async ({ page }) => {
+  await page.goto('/');
+  const prancha = page.locator('section.prancha');
+  await expect(prancha.locator('[data-croqui-mini]')).toHaveCount(5);
+  await expect(prancha.getByRole('link', { name: 'Ver a prancha completa →' })).toHaveAttribute('href', '/croquis');
+});

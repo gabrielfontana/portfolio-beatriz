@@ -11,6 +11,7 @@ const ROTAS = [
   '/pecas/macacao-ponte',
   '/processo',
   '/sobre',
+  '/croquis',
 ];
 
 for (const rota of ROTAS) {
