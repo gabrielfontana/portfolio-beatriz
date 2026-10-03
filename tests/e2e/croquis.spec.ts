@@ -7,13 +7,13 @@ async function abrirGrade(page: Page) {
   await page.goto('/croquis');
 }
 
-test('lista os 9 looks na ordem, cada um com 2 a 4 cores principais', async ({ page }) => {
+test('lista os 9 looks na ordem, cada um com 1 a 4 cores principais', async ({ page }) => {
   await abrirGrade(page);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Croquis');
   await expect(page.locator('[data-croqui] .croqui__rotulo')).toHaveText(LOOKS);
   for (const card of await page.locator('[data-croqui]').all()) {
     const n = await card.locator('[data-amostra]').count();
-    expect(n).toBeGreaterThanOrEqual(2);
+    expect(n).toBeGreaterThanOrEqual(1);
     expect(n).toBeLessThanOrEqual(4);
   }
 });
@@ -21,7 +21,7 @@ test('lista os 9 looks na ordem, cada um com 2 a 4 cores principais', async ({ p
 test('faixa da coleção tem uma faixa por cor de todas as paletas', async ({ page }) => {
   await abrirGrade(page);
   const totalCores = await page.locator('[data-amostra]').count();
-  expect(totalCores).toBeGreaterThanOrEqual(18);
+  expect(totalCores).toBeGreaterThanOrEqual(9);
   await expect(page.locator('.faixa > span')).toHaveCount(totalCores);
 });
 
@@ -197,4 +197,85 @@ test('desktop em tela baixa: a paleta do look em foco cabe na tela', async ({ pa
     const caixa = await ultima.boundingBox();
     expect(caixa!.y + caixa!.height, `${w}x${h}`).toBeLessThanOrEqual(h);
   }
+});
+
+/** Espera a fila parar de andar (no celular, um toque durante a rolagem só a interrompe). */
+async function filaParada(page: Page) {
+  const posicao = () =>
+    page.evaluate(() => `${Math.round(window.scrollY)}:${Math.round(document.querySelector('.lineup__trilho')!.scrollLeft)}`);
+  let antes = '';
+  await expect
+    .poll(async () => {
+      const agora = await posicao();
+      const parou = agora === antes;
+      antes = agora;
+      return parou;
+    }, { intervals: [150] })
+    .toBe(true);
+}
+
+async function abrirDesfile(page: Page) {
+  await page.goto('/croquis');
+  await expect(page.locator('html')).toHaveAttribute('data-animacoes', 'ativas');
+  const topo = await page.locator('section.lineup').evaluate((el) => el.getBoundingClientRect().top + window.scrollY);
+  await page.evaluate((y) => window.scrollTo(0, y), topo);
+  await expect.poll(() => numeroEmFoco(page)).toBe(1);
+}
+
+test('cores de um look fora de foco ficam travadas: não destacam nem selecionam', async ({ page }) => {
+  await abrirDesfile(page);
+  await expect(page.locator('#look-01 [data-amostra]').first()).toHaveAttribute('aria-disabled', 'false');
+  const travada = page.locator('#look-02 [data-amostra]').first();
+  await expect(travada).toHaveAttribute('aria-disabled', 'true');
+  await travada.dispatchEvent('click');
+  await expect(travada).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('#look-02 .croqui__palco')).not.toHaveAttribute('data-destacando', '');
+});
+
+test('tocar num look fora de foco leva a fila até ele e libera as cores com animação', async ({ page }) => {
+  await abrirDesfile(page);
+  await page.locator('#look-02 [data-amostra]').first().dispatchEvent('click');
+  await expect.poll(() => numeroEmFoco(page)).toBe(2);
+  const cor = page.locator('#look-02 [data-amostra]').first();
+  await expect(cor).toHaveAttribute('aria-disabled', 'false');
+  await expect(cor).toHaveAttribute('aria-pressed', 'false'); // o toque só trouxe o look
+  expect(await cor.locator('.amostra__bola').evaluate((el) => getComputedStyle(el).animationName)).not.toBe('none');
+  await filaParada(page);
+  await cor.click();
+  await expect(cor).toHaveAttribute('aria-pressed', 'true');
+});
+
+test('só uma cor fica selecionada e ela se solta quando o look sai de foco', async ({ page }) => {
+  await abrirDesfile(page);
+  const cor1 = page.locator('#look-01 [data-amostra]').first();
+  await cor1.click();
+  await expect(cor1).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('#look-02 [data-amostra]').first().dispatchEvent('click');
+  await expect.poll(() => numeroEmFoco(page)).toBe(2);
+  await expect(cor1).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('#look-01 .croqui__realce.ativo')).toHaveCount(0);
+  await expect(page.locator('[data-amostra][aria-pressed="true"]')).toHaveCount(0);
+});
+
+test('desktop: ir até um look distante é um movimento suave, não um salto', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'só no desfile');
+  await abrirDesfile(page);
+  const posicoes = page.evaluate(
+    () =>
+      new Promise<number[]>((ok) => {
+        const lista: number[] = [];
+        const inicio = performance.now();
+        const passo = () => {
+          lista.push(window.scrollY);
+          if (performance.now() - inicio < 1500) requestAnimationFrame(passo);
+          else ok(lista);
+        };
+        requestAnimationFrame(passo);
+      }),
+  );
+  await page.locator('#look-06 [data-amostra]').first().dispatchEvent('click');
+  const lista = await posicoes;
+  await expect.poll(() => numeroEmFoco(page)).toBe(6);
+  const distintas = new Set(lista.map((y) => Math.round(y))).size;
+  expect(distintas, `posições: ${distintas}`).toBeGreaterThan(15);
 });

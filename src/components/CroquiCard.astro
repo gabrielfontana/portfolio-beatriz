@@ -42,8 +42,8 @@ const mascaras = await Promise.all(cores.map((c) => getImage({ src: c.mascara, f
     ))}
   </div>
   <ul class="croqui__paleta" aria-label={`Paleta do ${titulo}`}>
-    {cores.map((c) => (
-      <li><AmostraCor hex={c.hex} nome={c.nome} chave={c.chave} titulo={titulo} /></li>
+    {cores.map((c, i) => (
+      <li><AmostraCor hex={c.hex} nome={c.nome} chave={c.chave} titulo={titulo} indice={i} /></li>
     ))}
   </ul>
 </article>
@@ -80,6 +80,7 @@ const mascaras = await Promise.all(cores.map((c) => getImage({ src: c.mascara, f
   :global(.lineup--carrossel) .croqui:not([data-em-foco]) .croqui__palco { opacity: 0.5; }
   :global(.lineup--desfile) .croqui[data-em-foco] .croqui__palco { transform: scale(1.08); transform-origin: bottom center; }
   .croqui[data-em-foco] .croqui__rotulo { color: var(--vermelho-texto); }
+  .croqui[data-travado] { cursor: pointer; }
 
   @media (prefers-reduced-motion: reduce) {
     .croqui__palco, .croqui__base, .croqui__realce { transition: none; }

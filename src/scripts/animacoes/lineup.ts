@@ -1,7 +1,25 @@
 import type { gsap as GSAP } from 'gsap';
+import { soltar } from '../destaque-cor';
 
+/**
+ * Põe um look em foco. Só as cores dele ficam liberadas (as dos outros, com aria-disabled);
+ * o look que sai de foco solta a cor que estava selecionada.
+ */
 function focar(cards: HTMLElement[], escolhido: HTMLElement | undefined) {
-  cards.forEach((c) => c.toggleAttribute('data-em-foco', c === escolhido));
+  for (const c of cards) {
+    const emFoco = c === escolhido;
+    if (c.hasAttribute('data-em-foco') === emFoco && c.hasAttribute('data-travado') !== emFoco) continue;
+    c.toggleAttribute('data-em-foco', emFoco);
+    c.toggleAttribute('data-travado', !emFoco);
+    c.querySelectorAll('[data-amostra]').forEach((b) => b.setAttribute('aria-disabled', String(!emFoco)));
+    if (!emFoco) soltar(c);
+  }
+}
+
+function liberarTudo(secao: HTMLElement) {
+  secao.querySelectorAll('[data-em-foco]').forEach((c) => c.removeAttribute('data-em-foco'));
+  secao.querySelectorAll('[data-travado]').forEach((c) => c.removeAttribute('data-travado'));
+  secao.querySelectorAll('[data-amostra]').forEach((b) => b.removeAttribute('aria-disabled'));
 }
 
 function maisPertoDoCentro(cards: HTMLElement[]): HTMLElement | undefined {
@@ -19,9 +37,15 @@ function maisPertoDoCentro(cards: HTMLElement[]): HTMLElement | undefined {
   return melhor;
 }
 
+/** Look fora de foco que recebeu o toque/foco (para trazê-lo ao centro). */
+function lookTravado(evento: Event): HTMLElement | null {
+  return (evento.target as HTMLElement | null)?.closest<HTMLElement>('[data-croqui][data-travado]') ?? null;
+}
+
 /**
  * Desktop: a seção fica presa e a rolagem leva a fila de croquis na horizontal (desfile).
  * Celular: carrossel com scroll-snap; o look encaixado no centro fica em foco.
+ * Nos dois, tocar num look fora de foco leva a fila até ele com um movimento suave.
  */
 export function iniciar(gsap: typeof GSAP): () => void {
   const secoes = gsap.utils.toArray<HTMLElement>('[data-anim="lineup"]');
@@ -61,47 +85,74 @@ export function iniciar(gsap: typeof GSAP): () => void {
       });
       atualizar();
 
+      // Leva a página até o ponto do desfile em que o look fica no centro, rolando aos poucos
+      // (mais longe, um pouco mais demorado). Girar a roda ou tocar a tela interrompe.
+      const rolagem = { y: 0 };
+      let viagem: ReturnType<typeof gsap.to> | undefined;
+      const irPara = (card: HTMLElement) => {
+        const st = tween.scrollTrigger;
+        if (!st) return;
+        const alvo = st.start + Math.min(Math.max(card.offsetLeft + card.offsetWidth / 2 - window.innerWidth / 2, 0), distancia());
+        rolagem.y = window.scrollY;
+        viagem?.kill();
+        viagem = gsap.to(rolagem, {
+          y: alvo,
+          duration: Math.min(1.6, 0.7 + Math.abs(alvo - rolagem.y) / 2500),
+          ease: 'power2.inOut',
+          onUpdate: () => window.scrollTo({ top: rolagem.y, behavior: 'instant' }),
+        });
+      };
+      const interromper = () => viagem?.kill();
+
       // Teclado: o navegador revela o elemento focado rolando a seção (overflow hidden) na
       // horizontal, o que se somaria ao x do GSAP. Em vez disso, zera essa rolagem e leva a
-      // página até o ponto do desfile em que o look focado fica no centro.
+      // fila até o look focado.
       const semRolagemLateral = () => {
         if (secao.scrollLeft) secao.scrollLeft = 0;
       };
       const aoFocar = (evento: FocusEvent) => {
         semRolagemLateral();
-        const card = (evento.target as HTMLElement).closest<HTMLElement>('[data-croqui]');
-        const st = tween.scrollTrigger;
-        if (!card || !st) return;
-        const alvo = card.offsetLeft + card.offsetWidth / 2 - window.innerWidth / 2;
-        window.scrollTo({ top: st.start + Math.min(Math.max(alvo, 0), distancia()), behavior: 'instant' });
-        atualizar();
+        const card = lookTravado(evento);
+        if (card) irPara(card);
+      };
+      const aoTocar = (evento: MouseEvent) => {
+        const card = lookTravado(evento);
+        if (card) irPara(card);
       };
       secao.addEventListener('scroll', semRolagemLateral);
       secao.addEventListener('focusin', aoFocar);
+      secao.addEventListener('click', aoTocar);
+      window.addEventListener('wheel', interromper, { passive: true });
+      window.addEventListener('touchstart', interromper, { passive: true });
       limpezas.push(() => {
+        viagem?.kill();
         window.removeEventListener('resize', respiro);
+        window.removeEventListener('wheel', interromper);
+        window.removeEventListener('touchstart', interromper);
         trilho.style.removeProperty('padding-left');
         trilho.style.removeProperty('padding-right');
         secao.removeEventListener('scroll', semRolagemLateral);
         secao.removeEventListener('focusin', aoFocar);
+        secao.removeEventListener('click', aoTocar);
       });
     });
     return () => {
       limpezas.forEach((f) => f());
       secoes.forEach((s) => {
         s.classList.remove('lineup--desfile');
-        s.querySelectorAll('[data-em-foco]').forEach((c) => c.removeAttribute('data-em-foco'));
+        liberarTudo(s);
       });
     };
   });
 
   mm.add('(max-width: 767px)', () => {
-    const observadores: IntersectionObserver[] = [];
+    const limpezas: Array<() => void> = [];
     secoes.forEach((secao) => {
       const trilho = secao.querySelector<HTMLElement>('.lineup__trilho');
       const cards = Array.from(secao.querySelectorAll<HTMLElement>('[data-croqui]'));
       if (!trilho || cards.length === 0) return;
       secao.classList.add('lineup--carrossel');
+      focar(cards, cards[0]);
       const io = new IntersectionObserver(
         (entradas) => {
           for (const e of entradas) if (e.isIntersecting) focar(cards, e.target as HTMLElement);
@@ -109,13 +160,24 @@ export function iniciar(gsap: typeof GSAP): () => void {
         { root: trilho, threshold: 0.6 },
       );
       cards.forEach((c) => io.observe(c));
-      observadores.push(io);
+      const aoTocar = (evento: MouseEvent) => {
+        const card = lookTravado(evento);
+        if (!card) return;
+        const r = card.getBoundingClientRect();
+        const t = trilho.getBoundingClientRect();
+        trilho.scrollBy({ left: r.left + r.width / 2 - (t.left + t.width / 2), behavior: 'smooth' });
+      };
+      trilho.addEventListener('click', aoTocar);
+      limpezas.push(() => {
+        io.disconnect();
+        trilho.removeEventListener('click', aoTocar);
+      });
     });
     return () => {
-      observadores.forEach((o) => o.disconnect());
+      limpezas.forEach((f) => f());
       secoes.forEach((s) => {
         s.classList.remove('lineup--carrossel');
-        s.querySelectorAll('[data-em-foco]').forEach((c) => c.removeAttribute('data-em-foco'));
+        liberarTudo(s);
       });
     };
   });

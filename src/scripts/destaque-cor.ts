@@ -1,4 +1,5 @@
-// Amostras de cor: hover/foco mostram o destaque; clique/toque liga e desliga (um por croqui).
+// Amostras de cor: hover/foco mostram o destaque; clique/toque liga e desliga (uma por vez na página).
+// Amostras com aria-disabled="true" (look fora de foco no line-up) não destacam nem selecionam.
 // Listeners delegados no document: valem para qualquer página, inclusive após o ClientRouter.
 
 function aplicar(croqui: HTMLElement, chave: string | null) {
@@ -12,16 +13,26 @@ function fixada(croqui: HTMLElement): string | null {
   return croqui.querySelector<HTMLElement>('[data-amostra][aria-pressed="true"]')?.dataset.amostra ?? null;
 }
 
+/** Desliga a cor selecionada de um croqui e apaga o destaque dele. */
+export function soltar(croqui: HTMLElement) {
+  croqui.querySelectorAll('[data-amostra][aria-pressed="true"]').forEach((b) => b.setAttribute('aria-pressed', 'false'));
+  aplicar(croqui, null);
+}
+
 function amostraDe(evento: Event) {
   const botao = (evento.target as HTMLElement | null)?.closest<HTMLButtonElement>('[data-amostra]');
   const croqui = botao?.closest<HTMLElement>('[data-croqui]');
-  return botao && croqui ? { botao, croqui } : null;
+  if (!botao || !croqui || botao.getAttribute('aria-disabled') === 'true') return null;
+  return { botao, croqui };
 }
 
 document.addEventListener('click', (evento) => {
   const alvo = amostraDe(evento);
   if (!alvo) return;
   const ligar = alvo.botao.getAttribute('aria-pressed') !== 'true';
+  document.querySelectorAll<HTMLElement>('[data-croqui]').forEach((c) => {
+    if (c !== alvo.croqui && fixada(c)) soltar(c);
+  });
   alvo.croqui.querySelectorAll<HTMLButtonElement>('[data-amostra]').forEach((b) => {
     b.setAttribute('aria-pressed', String(b === alvo.botao && ligar));
   });
