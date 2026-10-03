@@ -74,7 +74,8 @@ const mascaras = await Promise.all(cores.map((c) => getImage({ src: c.mascara, f
   .croqui__paleta { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); gap: 0.25rem; }
 
   /* Modos do line-up (classes postas pelo módulo de animação). */
-  :global(.lineup--desfile) .croqui__palco { height: 58vh; width: auto; }
+  /* Altura que deixa caber rótulo + paleta (até 4 linhas num card estreito) e o scale de 1.08. */
+  :global(.lineup--desfile) .croqui__palco { height: min(58vh, calc((94vh - 18rem) / 1.08)); width: auto; }
   :global(.lineup--desfile) .croqui:not([data-em-foco]) .croqui__palco,
   :global(.lineup--carrossel) .croqui:not([data-em-foco]) .croqui__palco { opacity: 0.5; }
   :global(.lineup--desfile) .croqui[data-em-foco] .croqui__palco { transform: scale(1.08); transform-origin: bottom center; }

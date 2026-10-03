@@ -16,12 +16,23 @@ export function lerPaleta(md) {
   const m = md.match(FRONTMATTER);
   if (!m) throw new Error('index.md sem frontmatter (bloco entre ---)');
   const dados = parse(m[1]) ?? {};
-  return Array.isArray(dados.paleta) && dados.paleta.length ? dados.paleta : null;
+  if (!Array.isArray(dados.paleta) || dados.paleta.length === 0) return null;
+  dados.paleta.forEach((c, i) => {
+    // Sem aspas, "#bf343a" vira comentário no YAML e o hex chega vazio.
+    if (typeof c?.hex !== 'string' || !/^#[0-9a-f]{6}$/i.test(c.hex)) {
+      throw new Error(`cor ${i + 1} sem hex válido — coloque entre aspas, ex.: hex: "#bf343a"`);
+    }
+  });
+  return dados.paleta;
 }
 
 export function inserirPaleta(md, paleta) {
   const bloco = ['paleta:', ...paleta.flatMap((c) => [`  - hex: "${c.hex}"`, `    nome: ${c.nome}`])].join('\n');
-  return md.replace(FRONTMATTER, (_tudo, corpo) => `---\n${corpo}\n${bloco}\n---`);
+  return md.replace(FRONTMATTER, (_tudo, corpo) => {
+    // Remove um "paleta:" vazio (ou "paleta: []") deixado à mão, para não duplicar a chave.
+    const semVazia = corpo.replace(/^paleta:[ \t]*(\[\s*\])?[ \t]*$\r?\n?/m, '').replace(/\s+$/, '');
+    return `---\n${semVazia}\n${bloco}\n---`;
+  });
 }
 
 function acharCroqui(pasta) {
@@ -32,6 +43,7 @@ function acharCroqui(pasta) {
 
 async function lerPixels(arquivo, largura) {
   const { data, info } = await sharp(arquivo)
+    .rotate() // aplica a rotação EXIF de fotos de celular, como o Astro faz ao exibir
     .resize({ width: largura, withoutEnlargement: true })
     .removeAlpha()
     .raw()

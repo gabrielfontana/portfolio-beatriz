@@ -143,3 +143,37 @@ test('navegar e voltar não acumula gatilhos do desfile', async ({ page }) => {
   await expect(html).toHaveAttribute('data-gatilhos', gatilhos!);
   await expect(page.locator('[data-croqui][data-em-foco]')).toHaveCount(1);
 });
+
+test('desktop: Tab até uma cor de um look distante leva a fila até ele sem desalinhar o desfile', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'só no desfile');
+  await page.goto('/croquis');
+  await expect(page.locator('html')).toHaveAttribute('data-animacoes', 'ativas');
+  const secao = page.locator('section.lineup');
+  await secao.evaluate((el) => window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY));
+  await page.locator('#look-07 [data-amostra]').first().focus();
+  await expect.poll(() => numeroEmFoco(page)).toBe(7);
+  expect(await secao.evaluate((el) => el.scrollLeft)).toBe(0);
+  const caixa = await page.locator('#look-07').boundingBox();
+  const largura = page.viewportSize()!.width;
+  expect(caixa!.x).toBeGreaterThanOrEqual(0);
+  expect(caixa!.x + caixa!.width).toBeLessThanOrEqual(largura);
+  // rolar até o fim do desfile continua mostrando o último look
+  await page.evaluate(() => window.scrollBy(0, 6000));
+  await page.evaluate(() => window.scrollBy(0, -400));
+  await expect.poll(() => numeroEmFoco(page)).toBeGreaterThanOrEqual(8);
+});
+
+test('desktop em tela baixa: a paleta do look em foco cabe na tela', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'só no desfile');
+  for (const [w, h] of [[1280, 560], [1366, 650]]) {
+    await page.setViewportSize({ width: w, height: h });
+    await page.goto('/croquis');
+    await expect(page.locator('html')).toHaveAttribute('data-animacoes', 'ativas');
+    await page.locator('section.lineup').evaluate((el) => window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY));
+    await page.evaluate(() => window.scrollBy(0, 300));
+    const ultima = page.locator('[data-croqui][data-em-foco] [data-amostra]').last();
+    await expect(ultima).toHaveCount(1);
+    const caixa = await ultima.boundingBox();
+    expect(caixa!.y + caixa!.height, `${w}x${h}`).toBeLessThanOrEqual(h);
+  }
+});

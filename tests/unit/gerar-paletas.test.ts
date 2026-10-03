@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mkdtempSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, readFileSync, existsSync, unlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import sharp from 'sharp';
@@ -77,5 +77,33 @@ describe('processarLook', () => {
     const r = await processarLook(pasta);
     expect(r.removidas).toEqual(['mascara-abcdef.png']);
     expect(existsSync(join(pasta, 'mascara-abcdef.png'))).toBe(false);
+  });
+});
+
+describe('erros de edição à mão e fotos de celular', () => {
+  it('hex sem aspas (vira comentário no YAML): erro claro pedindo aspas', () => {
+    const md = `${MD.slice(0, -4)}paleta:\n  - hex: #BF343A\n    nome: Vermelho\n---\n`;
+    expect(() => lerPaleta(md)).toThrow('cor 1 sem hex válido — coloque entre aspas, ex.: hex: "#bf343a"');
+  });
+
+  it('paleta: vazio não gera chave duplicada', async () => {
+    const pasta = await criarLook();
+    writeFileSync(join(pasta, 'index.md'), `${MD.slice(0, -4)}paleta:\n---\n`);
+    const r = await processarLook(pasta);
+    expect(r.criada).toBe(true);
+    const md = readFileSync(join(pasta, 'index.md'), 'utf8');
+    expect(md.match(/^paleta:/gm)).toHaveLength(1);
+    expect(lerPaleta(md)).toEqual(r.paleta);
+  });
+
+  it('foto com rotação EXIF: máscara na orientação em pé', async () => {
+    const pasta = await criarLook();
+    const deitada = await sharp(join(pasta, 'croqui.png')).rotate(-90).jpeg({ quality: 95 }).withMetadata({ orientation: 6 }).toBuffer();
+    writeFileSync(join(pasta, 'croqui.jpeg'), deitada);
+    unlinkSync(join(pasta, 'croqui.png'));
+    writeFileSync(join(pasta, 'index.md'), MD.replace('croqui.png', 'croqui.jpeg'));
+    const r = await processarLook(pasta);
+    const meta = await sharp(join(pasta, r.mascaras[0])).metadata();
+    expect([meta.width, meta.height]).toEqual([200, 300]);
   });
 });

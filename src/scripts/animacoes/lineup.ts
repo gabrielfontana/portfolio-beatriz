@@ -28,6 +28,7 @@ export function iniciar(gsap: typeof GSAP): () => void {
   const mm = gsap.matchMedia();
 
   mm.add('(min-width: 768px)', () => {
+    const limpezas: Array<() => void> = [];
     secoes.forEach((secao) => {
       const trilho = secao.querySelector<HTMLElement>('.lineup__trilho');
       const cards = Array.from(secao.querySelectorAll<HTMLElement>('[data-croqui]'));
@@ -35,7 +36,7 @@ export function iniciar(gsap: typeof GSAP): () => void {
       secao.classList.add('lineup--desfile');
       const distancia = () => Math.max(0, trilho.scrollWidth - window.innerWidth);
       const atualizar = () => focar(cards, maisPertoDoCentro(cards));
-      gsap.to(trilho, {
+      const tween = gsap.to(trilho, {
         x: () => -distancia(),
         ease: 'none',
         scrollTrigger: {
@@ -50,8 +51,31 @@ export function iniciar(gsap: typeof GSAP): () => void {
         },
       });
       atualizar();
+
+      // Teclado: o navegador revela o elemento focado rolando a seção (overflow hidden) na
+      // horizontal, o que se somaria ao x do GSAP. Em vez disso, zera essa rolagem e leva a
+      // página até o ponto do desfile em que o look focado fica no centro.
+      const semRolagemLateral = () => {
+        if (secao.scrollLeft) secao.scrollLeft = 0;
+      };
+      const aoFocar = (evento: FocusEvent) => {
+        semRolagemLateral();
+        const card = (evento.target as HTMLElement).closest<HTMLElement>('[data-croqui]');
+        const st = tween.scrollTrigger;
+        if (!card || !st) return;
+        const alvo = card.offsetLeft + card.offsetWidth / 2 - window.innerWidth / 2;
+        window.scrollTo({ top: st.start + Math.min(Math.max(alvo, 0), distancia()), behavior: 'instant' });
+        atualizar();
+      };
+      secao.addEventListener('scroll', semRolagemLateral);
+      secao.addEventListener('focusin', aoFocar);
+      limpezas.push(() => {
+        secao.removeEventListener('scroll', semRolagemLateral);
+        secao.removeEventListener('focusin', aoFocar);
+      });
     });
     return () => {
+      limpezas.forEach((f) => f());
       secoes.forEach((s) => {
         s.classList.remove('lineup--desfile');
         s.querySelectorAll('[data-em-foco]').forEach((c) => c.removeAttribute('data-em-foco'));
