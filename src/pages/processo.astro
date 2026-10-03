@@ -1,0 +1,34 @@
+---
+import { getCollection, getEntry } from 'astro:content';
+import Revista from '../layouts/Revista.astro';
+import ProcessoScroll from '../components/ProcessoScroll.astro';
+import { porRecencia } from '../lib/colecoes';
+
+const pecas = (await getCollection('pecas')).sort(porRecencia);
+const comProcesso = await Promise.all(
+  pecas.flatMap((p) => (p.data.processo ? [{ peca: p, processo: p.data.processo }] : [])).map(async (item) => ({
+    ...item,
+    cor: (await getEntry(item.peca.data.colecao))?.data.cor ?? '#ff2e88',
+  })),
+);
+---
+<Revista titulo="Processo" descricao="Do croqui à costura: como nascem as peças de Beatriz.">
+  <header class="container processo-topo">
+    <p class="kicker">Reportagem</p>
+    <h1 data-anim="revelar">Do croqui <em>à costura</em></h1>
+    <p class="processo-topo__linha" data-anim="revelar">
+      Cada peça passa por quatro atos: o desenho, o molde, o corte e a costura. Role a página para acompanhar.
+    </p>
+  </header>
+  {comProcesso.length > 0
+    ? comProcesso.map(({ peca, processo, cor }) => (
+        <ProcessoScroll id={peca.id} titulo={peca.data.titulo} cor={cor} processo={processo} />
+      ))
+    : <p class="container">Novos bastidores em breve.</p>}
+</Revista>
+
+<style>
+  .processo-topo { padding-block: 3rem; }
+  .processo-topo em { color: var(--vermelho); }
+  .processo-topo__linha { max-width: 50ch; font-size: 1.2rem; margin-top: 1.25rem; }
+</style>
