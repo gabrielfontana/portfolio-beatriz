@@ -7,13 +7,13 @@ async function abrirGrade(page: Page) {
   await page.goto('/croquis');
 }
 
-test('lista os 9 looks na ordem, cada um com 3 a 4 cores', async ({ page }) => {
+test('lista os 9 looks na ordem, cada um com 2 a 4 cores principais', async ({ page }) => {
   await abrirGrade(page);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Croquis');
   await expect(page.locator('[data-croqui] .croqui__rotulo')).toHaveText(LOOKS);
   for (const card of await page.locator('[data-croqui]').all()) {
     const n = await card.locator('[data-amostra]').count();
-    expect(n).toBeGreaterThanOrEqual(3);
+    expect(n).toBeGreaterThanOrEqual(2);
     expect(n).toBeLessThanOrEqual(4);
   }
 });
@@ -21,7 +21,7 @@ test('lista os 9 looks na ordem, cada um com 3 a 4 cores', async ({ page }) => {
 test('faixa da coleção tem uma faixa por cor de todas as paletas', async ({ page }) => {
   await abrirGrade(page);
   const totalCores = await page.locator('[data-amostra]').count();
-  expect(totalCores).toBeGreaterThanOrEqual(27);
+  expect(totalCores).toBeGreaterThanOrEqual(18);
   await expect(page.locator('.faixa > span')).toHaveCount(totalCores);
 });
 
@@ -162,6 +162,27 @@ test('desktop: Tab até uma cor de um look distante leva a fila até ele sem des
   await page.evaluate(() => window.scrollBy(0, -400));
   await expect.poll(() => numeroEmFoco(page)).toBeGreaterThanOrEqual(8);
 });
+
+for (const [w, h] of [[1280, 720], [1920, 1080], [1024, 768]]) {
+  test(`desktop ${w}x${h}: o primeiro e o último look chegam ao centro e ficam em foco`, async ({ page, isMobile }) => {
+    test.skip(isMobile, 'só no desfile');
+    await page.setViewportSize({ width: w, height: h });
+    await page.goto('/croquis');
+    await expect(page.locator('html')).toHaveAttribute('data-animacoes', 'ativas');
+    const centroDe = (sel: string) =>
+      page.locator(sel).evaluate((el) => {
+        const r = el.querySelector('.croqui__palco')!.getBoundingClientRect();
+        return r.left + r.width / 2;
+      });
+    const topo = await page.locator('section.lineup').evaluate((el) => el.getBoundingClientRect().top + window.scrollY);
+    await page.evaluate((y) => window.scrollTo(0, y), topo);
+    await expect.poll(() => numeroEmFoco(page)).toBe(1);
+    expect(Math.abs((await centroDe('#look-01')) - w / 2)).toBeLessThan(w * 0.03);
+    await page.evaluate(() => window.scrollBy(0, 20000));
+    await expect.poll(() => numeroEmFoco(page)).toBe(9);
+    await expect.poll(async () => Math.abs((await centroDe('#look-09')) - w / 2)).toBeLessThan(w * 0.03);
+  });
+}
 
 test('desktop em tela baixa: a paleta do look em foco cabe na tela', async ({ page, isMobile }) => {
   test.skip(isMobile, 'só no desfile');

@@ -34,6 +34,15 @@ export function iniciar(gsap: typeof GSAP): () => void {
       const cards = Array.from(secao.querySelectorAll<HTMLElement>('[data-croqui]'));
       if (!trilho || cards.length === 0) return;
       secao.classList.add('lineup--desfile');
+      // Margens que deixam o primeiro e o último look chegarem ao centro da tela (e ficarem em foco).
+      const respiro = () => {
+        const primeiro = cards[0];
+        const ultimo = cards[cards.length - 1];
+        trilho.style.paddingLeft = `${Math.max(0, window.innerWidth / 2 - primeiro.offsetWidth / 2)}px`;
+        trilho.style.paddingRight = `${Math.max(0, window.innerWidth / 2 - ultimo.offsetWidth / 2)}px`;
+      };
+      respiro();
+      window.addEventListener('resize', respiro);
       const distancia = () => Math.max(0, trilho.scrollWidth - window.innerWidth);
       const atualizar = () => focar(cards, maisPertoDoCentro(cards));
       const tween = gsap.to(trilho, {
@@ -70,6 +79,9 @@ export function iniciar(gsap: typeof GSAP): () => void {
       secao.addEventListener('scroll', semRolagemLateral);
       secao.addEventListener('focusin', aoFocar);
       limpezas.push(() => {
+        window.removeEventListener('resize', respiro);
+        trilho.style.removeProperty('padding-left');
+        trilho.style.removeProperty('padding-right');
         secao.removeEventListener('scroll', semRolagemLateral);
         secao.removeEventListener('focusin', aoFocar);
       });
