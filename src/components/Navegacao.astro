@@ -45,6 +45,10 @@ const atual = Astro.url.pathname;
     text-decoration: none;
   }
   a[aria-current='page'] { text-decoration: underline; text-underline-offset: 4px; }
+  /* No celular o menu quebra em duas linhas e, preso, tomaria boa parte da tela: lá ele rola junto. */
+  @media (max-width: 767px) {
+    .nav { position: relative; }
+  }
   @media (min-width: 768px) {
     ul { gap: 2rem; }
     ul a { font-size: 0.78rem; }

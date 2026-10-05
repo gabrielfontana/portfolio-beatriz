@@ -56,13 +56,20 @@ test('título, três seções com divisão escrita e abas que levam a cada uma',
   }
 });
 
-test('as abas ficam presas abaixo do menu e marcam a seção na tela', async ({ page }) => {
+test('as abas ficam presas (abaixo do menu no desktop; no topo no celular) e marcam a seção na tela', async ({ page, isMobile }) => {
   await abrir(page);
   await page.getByRole('navigation', { name: 'Seções da página' }).getByRole('link', { name: 'Estudos' }).click();
   await expect(page.locator('[data-aba="estudos"]')).toHaveAttribute('aria-current', 'true');
   const menu = (await page.locator('.nav').boundingBox())!;
   const abas = (await page.locator('.abas').boundingBox())!;
-  expect(Math.abs(abas.y - (menu.y + menu.height))).toBeLessThan(3);
+  // no celular o menu rola junto (não ocupa a tela) e as abas ficam coladas no topo
+  if (isMobile) {
+    expect(menu.y + menu.height).toBeLessThanOrEqual(0);
+    expect(Math.abs(abas.y)).toBeLessThan(2);
+  } else {
+    expect(menu.y).toBe(0);
+    expect(Math.abs(abas.y - (menu.y + menu.height))).toBeLessThan(3);
+  }
   await rolarAte(page, '#sketchbook', 0);
   await expect(page.locator('[data-aba="sketchbook"]')).toHaveAttribute('aria-current', 'true');
 });
@@ -190,7 +197,8 @@ test('desenho ao vivo: desenha quando aparece e fica pronto mesmo rolando para l
   await expect(fig).not.toHaveClass(/ao-vivo--preparado/);
 });
 
-test('desenho ao vivo: as fichas técnicas chegam logo, mesmo numa rolagem rápida', async ({ page }) => {
+test('desenho ao vivo no desktop: as fichas técnicas chegam logo, mesmo numa rolagem rápida', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'no celular as fichas ficam embaixo do croqui e entram quando aparecem');
   await abrir(page);
   const fig = page.locator('[data-ao-vivo]').nth(1);
   // só a pontinha da seção aparece
@@ -212,6 +220,23 @@ test('desenho ao vivo: a mesa de luz vai de ponta a ponta da tela', async ({ pag
     });
   expect(esquerda).toBe(0);
   expect(Math.abs(largura - tela)).toBeLessThan(1);
+});
+
+test('desenho ao vivo no celular: as fichas só entram quando elas mesmas aparecem na tela', async ({ page, isMobile }) => {
+  test.skip(!isMobile, 'layout empilhado do celular');
+  await abrir(page);
+  for (const indice of [0, 1]) {
+    const fig = page.locator('[data-ao-vivo]').nth(indice);
+    const fichas = fig.locator('.ao-vivo__ficha');
+    // as fichas logo abaixo da borda da tela (o croqui à vista): elas continuam esperando
+    await fig.locator('.ao-vivo__fichas').evaluate((el) => window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - window.innerHeight + 4));
+    await page.waitForTimeout(900);
+    await expect(fichas.first()).toHaveCSS('opacity', '0');
+    // rolando até as fichas, elas entram e terminam no lugar, à vista
+    await fig.locator('.ao-vivo__fichas').evaluate((el) => el.scrollIntoView({ block: 'center' }));
+    for (const ficha of await fichas.all()) await expect(ficha).toHaveCSS('opacity', '1');
+    await expect(fichas.first()).toBeInViewport();
+  }
 });
 
 test('desenho ao vivo com movimento reduzido: já aparece pronto', async ({ page }) => {
@@ -426,6 +451,10 @@ test('navegar e voltar remonta a página sem erros', async ({ page }) => {
   await page.getByRole('navigation', { name: 'Principal' }).getByRole('link', { name: 'Coleções' }).click();
   await expect(page).toHaveURL(/\/colecoes$/);
   await expect(page.locator('html')).not.toHaveAttribute('data-croquis', 'pronto');
+  // espera a transição de página terminar: voltar no meio dela faz o navegador registrar
+  // "Transition was skipped" no console (é o teste apressado, não um erro do site)
+  await expect(page.locator('html')).not.toHaveAttribute('data-astro-transition', /.*/);
+  await page.waitForTimeout(400);
   await page.goBack();
   await expect(page).toHaveURL(/\/croquis$/);
   await expect(page.locator('html')).toHaveAttribute('data-croquis', 'pronto');

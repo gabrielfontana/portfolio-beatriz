@@ -177,8 +177,10 @@ const logo = await getImage({ src: logoSketchbook, width: 96, format: 'png' });
   .abas img { width: 22px; height: 22px; border-radius: 5px; }
   .abas svg, .capitulo__icone svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
   .abas svg { width: 18px; height: 18px; }
-  /* no celular o menu já ocupa mais altura: abas mais baixas */
+  /* no celular o menu rola junto: as abas ficam no topo da tela, mais baixas */
   @media (max-width: 767px) {
+    .abas { top: 0; }
+    .capitulo { scroll-margin-top: 3rem; }
     .abas__lista { padding-top: 0.3rem; }
     .abas a { padding: 0.4rem 0.6rem; font-size: 0.72rem; gap: 0.35rem; }
     .abas img { width: 18px; height: 18px; }

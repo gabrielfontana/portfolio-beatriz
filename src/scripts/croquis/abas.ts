@@ -1,7 +1,8 @@
 import { ouvir, type Limpeza } from './comum';
 
 /**
- * Abas presas logo abaixo do menu: a altura do menu (que quebra linha no celular) vira --altura-menu,
+ * Abas presas logo abaixo do menu (no celular, o menu rola junto e as abas ficam no topo da tela):
+ * a altura do menu preso vira --altura-menu,
  * e a aba da seção que ocupa o meio da tela fica marcada.
  */
 export function iniciar(raiz: HTMLElement): Limpeza {
@@ -9,11 +10,16 @@ export function iniciar(raiz: HTMLElement): Limpeza {
   if (abas.length === 0) return () => {};
   const menu = document.querySelector<HTMLElement>('.nav');
   const medir = () => {
-    if (menu) document.documentElement.style.setProperty('--altura-menu', `${menu.offsetHeight}px`);
+    // só conta a altura do menu quando ele fica preso no topo (no celular ele rola junto)
+    const preso = menu !== null && getComputedStyle(menu).position === 'sticky';
+    document.documentElement.style.setProperty('--altura-menu', `${preso ? menu.offsetHeight : 0}px`);
   };
   medir();
   const ro = new ResizeObserver(medir);
   if (menu) ro.observe(menu);
+  // ao cruzar o breakpoint o menu passa de solto a preso (ou o contrário) sem mudar de altura
+  const largura = window.matchMedia('(max-width: 767px)');
+  largura.addEventListener('change', medir);
 
   const marcar = (id: string) => abas.forEach((a) => a.setAttribute('aria-current', String(a.dataset.aba === id)));
   marcar(abas[0].dataset.aba ?? '');
@@ -33,6 +39,7 @@ export function iniciar(raiz: HTMLElement): Limpeza {
 
   return () => {
     ro.disconnect();
+    largura.removeEventListener('change', medir);
     io.disconnect();
     aoTocar();
     abas.forEach((a) => a.removeAttribute('aria-current'));

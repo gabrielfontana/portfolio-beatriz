@@ -43,7 +43,10 @@ export function iniciar(raiz: HTMLElement): Limpeza {
   if (reduzido()) return () => limpezas.forEach((f) => f());
 
   const celular = window.matchMedia('(max-width: 767px)').matches;
-  const fora = celular ? 'translateY(45vh)' : 'translateX(70vw)';
+  // No celular as fichas ficam embaixo do croqui e a mesa é alta: cada parte tem o próprio gatilho
+  // (a folha para o desenho, a fileira de fichas para as fichas), senão a entrada acontece fora da tela.
+  // As fichas entram pela lateral (a mesa recorta o que está fora).
+  const fora = celular ? 'translateX(75vw) rotate(8deg)' : 'translateX(70vw)';
   const estados = figuras.map((fig) => {
     const canvas = fig.querySelector<HTMLCanvasElement>('canvas')!;
     const ctx = canvas.getContext('2d', { willReadFrequently: false })!;
@@ -55,7 +58,9 @@ export function iniciar(raiz: HTMLElement): Limpeza {
       f.style.transform = fora;
       f.style.opacity = '0';
     });
-    return { fig, ctx, fichas, inicio: null as number | null, dados: null as null | { cor: Uint8ClampedArray; lapis: Uint8ClampedArray; mapa: Uint8ClampedArray; saida: ImageData }, pronto: false };
+    const alvoFichas = (celular && fig.querySelector<HTMLElement>('.ao-vivo__fichas')) || fig;
+    const alvoDesenho = (celular && fig.querySelector<HTMLElement>('.ao-vivo__folha')) || fig;
+    return { fig, ctx, fichas, alvoFichas, alvoDesenho, inicio: null as number | null, dados: null as null | { cor: Uint8ClampedArray; lapis: Uint8ClampedArray; mapa: Uint8ClampedArray; saida: ImageData }, pronto: false };
   });
 
   let raf = 0;
@@ -87,7 +92,7 @@ export function iniciar(raiz: HTMLElement): Limpeza {
       entradas.forEach((ent) => {
         if (!ent.isIntersecting) return;
         vigiaFichas.unobserve(ent.target);
-        const e = estados.find((s) => s.fig === ent.target)!;
+        const e = estados.find((s) => s.alvoFichas === ent.target)!;
         e.fichas.forEach((f, i) => {
           f.animate([{ transform: fora, opacity: 0 }, { transform: 'none', opacity: 1 }], {
             duration: DURACAO_FICHA,
@@ -99,14 +104,14 @@ export function iniciar(raiz: HTMLElement): Limpeza {
           f.style.opacity = '';
         });
       }),
-    { threshold: 0.12 },
+    { threshold: celular ? 0.3 : 0.12 },
   );
   const vigiaDesenho = new IntersectionObserver(
     (entradas) =>
       entradas.forEach((ent) => {
         if (!ent.isIntersecting) return;
         vigiaDesenho.unobserve(ent.target);
-        const e = estados.find((s) => s.fig === ent.target)!;
+        const e = estados.find((s) => s.alvoDesenho === ent.target)!;
         const { cor, lapis, tempo } = e.fig.dataset;
         Promise.all([pixels(cor!), pixels(lapis!), pixels(tempo!)])
           .then(([c, l, m]) => {
@@ -124,8 +129,8 @@ export function iniciar(raiz: HTMLElement): Limpeza {
     { threshold: 0.35 },
   );
   estados.forEach((e) => {
-    vigiaFichas.observe(e.fig);
-    vigiaDesenho.observe(e.fig);
+    vigiaFichas.observe(e.alvoFichas);
+    vigiaDesenho.observe(e.alvoDesenho);
   });
 
   return () => {
