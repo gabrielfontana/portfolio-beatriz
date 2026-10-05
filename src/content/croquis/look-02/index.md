@@ -1,11 +1,14 @@
 ---
 titulo: Look 02
 ordem: 2
-imagem: ./croqui.jpeg
-alt: Croqui de conjunto de jaqueta curta e minissaia transpassada com estampa azul e branca de corações, com argolas douradas.
+pose: a
+imagem: ./croqui.jpg
+alt: "Croqui de jaqueta e minissaia jeans com bolsos em forma de coração e bolsa vermelha de coração."
 paleta:
-  - hex: "#093c9d"
+  - hex: "#1974b6"
     nome: Azul
-  - hex: "#0b090a"
+  - hex: "#141823"
     nome: Preto
+  - hex: "#b1363b"
+    nome: Vermelho
 ---

@@ -1,0 +1,114 @@
+---
+import type { ImageMetadata } from 'astro';
+import CroquiCard from '../CroquiCard.astro';
+import type { CorDaPaleta } from '../../lib/croquis';
+
+interface Look {
+  id: string;
+  titulo: string;
+  alt: string;
+  imagem: ImageMetadata;
+  cores: Array<CorDaPaleta & { chave: string; mascara: ImageMetadata }>;
+}
+interface Props {
+  /** Um manequim por pose; os looks já em ordem. */
+  manequins: Look[][];
+}
+const { manequins } = Astro.props;
+---
+<!-- Provador: cada pose vira um manequim e a roupa troca no mesmo corpo (os croquis são alinhados
+     pela cabeça no npm run croquis). O script põe .provador--ativo; sem ele, todos os looks em grade. -->
+<div class="provador" data-provador>
+  {manequins.map((looks, k) => (
+    <div class="manequim" data-manequim role="group" aria-label={`Pose ${k + 1}: ${looks.length} looks`}>
+      <div class="manequim__vitrine" data-vitrine>
+        {looks.map((l, i) => <CroquiCard {...l} atual={i === 0} />)}
+      </div>
+      <div class="manequim__controles" data-so-js hidden>
+        <button type="button" class="manequim__seta" data-anterior aria-label="Look anterior">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>
+        </button>
+        <div class="manequim__pontos" role="group" aria-label="Looks desta pose">
+          {looks.map((l, i) => (
+            <button type="button" class="manequim__ponto" data-ir={i} aria-label={l.titulo} aria-current={i === 0 ? 'true' : 'false'}></button>
+          ))}
+        </div>
+        <button type="button" class="manequim__seta" data-proximo aria-label="Próximo look">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" /></svg>
+        </button>
+      </div>
+    </div>
+  ))}
+</div>
+
+<style>
+  /* Sem JS: cada pose é uma grade com todos os looks e paletas. */
+  .provador { display: grid; gap: 3rem; }
+  .manequim__vitrine { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 2.5rem 2rem; }
+
+  /* Com o script: três manequins lado a lado (no celular, um carrossel), looks empilhados. */
+  .provador.provador--ativo { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(1rem, 3vw, 2.5rem); align-items: start; }
+  .provador--ativo .manequim__vitrine { grid-template-columns: minmax(0, 1fr); gap: 0.9rem; }
+  .provador--ativo .manequim__vitrine > :global(.croqui) { display: contents; }
+  .provador--ativo .manequim__vitrine :global(.croqui__palco) { grid-area: 1 / 1; cursor: pointer; }
+  .provador--ativo .manequim__vitrine :global(.croqui__paleta) { grid-area: 2 / 1; }
+  .provador--ativo .manequim__vitrine :global(.croqui:not([data-atual]) .croqui__palco),
+  .provador--ativo .manequim__vitrine :global(.croqui:not([data-atual]) .croqui__paleta) { visibility: hidden; }
+  /* Durante a troca o look que sai continua visível por baixo do que entra. */
+  .provador--ativo .manequim__vitrine :global(.croqui[data-saindo] .croqui__palco) { visibility: visible; }
+  .provador--ativo .manequim__vitrine :global(.croqui[data-atual] .croqui__palco) { z-index: 1; }
+
+  .manequim__controles { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-top: 1rem; }
+  .manequim__controles[hidden] { display: none; }
+  .manequim__seta {
+    display: grid; place-items: center; flex: none; width: 2.75rem; height: 2.75rem; padding: 0;
+    border: 2px solid var(--tinta); border-radius: 50%; background: var(--papel); color: var(--tinta); cursor: pointer;
+  }
+  .manequim__seta svg { width: 1.2rem; height: 1.2rem; fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+  .manequim__seta:hover { background: var(--tinta); color: var(--papel); }
+  .manequim__pontos { display: flex; flex-wrap: wrap; justify-content: center; }
+  /* Área de toque de 24px; a bolinha é o ::before (como no resto do site). */
+  .manequim__ponto { display: grid; place-items: center; width: 1.5rem; height: 1.5rem; padding: 0; border: 0; background: none; cursor: pointer; }
+  .manequim__ponto::before {
+    content: ''; width: 0.5rem; height: 0.5rem; border-radius: 999px; background: var(--tinta); opacity: 0.25;
+    transition: opacity 0.3s, background-color 0.3s, transform 0.3s;
+  }
+  .manequim__ponto:hover::before { opacity: 0.55; }
+  .manequim__ponto[aria-current='true']::before { opacity: 1; background: var(--vermelho-texto); transform: scale(1.35); }
+
+  .manequim { position: relative; }
+  /* a figura (só ela) é limitada pela altura da tela, para a paleta e as setas caberem embaixo;
+     a paleta usa a largura toda da coluna */
+  .provador--ativo .manequim__vitrine :global(.croqui__palco) { width: min(100%, calc(54vh * 2 / 3)); justify-self: center; }
+  /* arrastar para o lado sobre a figura troca a roupa; a rolagem vertical continua com o navegador */
+  .provador--ativo .manequim__vitrine :global(.croqui__palco) { touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+
+  /* Troca de look: máscara 3× mais alta que a figura, com a borda esfumada no meio; animar a posição
+     faz a borda descer (caindo) ou subir (subindo). */
+  .provador--ativo :global(.croqui__palco.caindo),
+  .provador--ativo :global(.croqui__palco.subindo) {
+    z-index: 2; -webkit-mask-size: 100% 300%; mask-size: 100% 300%; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+  }
+  .provador--ativo :global(.croqui__palco.caindo) {
+    -webkit-mask-image: linear-gradient(to bottom, #000 42%, transparent 58%); mask-image: linear-gradient(to bottom, #000 42%, transparent 58%);
+    -webkit-mask-position: 0 100%; mask-position: 0 100%;
+  }
+  .provador--ativo :global(.croqui__palco.subindo) {
+    -webkit-mask-image: linear-gradient(to top, #000 42%, transparent 58%); mask-image: linear-gradient(to top, #000 42%, transparent 58%);
+    -webkit-mask-position: 0 0; mask-position: 0 0;
+  }
+  /* faixa de luz que acompanha a borda: some no papel, aparece sobre a roupa */
+  .manequim :global(.provador__brilho) { position: absolute; z-index: 3; overflow: hidden; pointer-events: none; }
+  .manequim :global(.provador__brilho > div) {
+    mix-blend-mode: soft-light; background: linear-gradient(to bottom, transparent, #ffffff73 50%, transparent);
+  }
+
+  /* Celular: um manequim embaixo do outro (arrastar para o lado fica só para trocar a roupa). */
+  @media (max-width: 767px) {
+    .provador.provador--ativo { grid-template-columns: minmax(0, 1fr); gap: 3rem; }
+    .provador--ativo .manequim__vitrine :global(.croqui__palco) { width: min(100%, calc(50svh * 2 / 3)); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .manequim__ponto::before { transition: none; }
+  }
+</style>

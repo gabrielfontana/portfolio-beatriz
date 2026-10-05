@@ -1,11 +1,12 @@
 ---
 titulo: Look 01
 ordem: 1
-imagem: ./croqui.jpeg
-alt: Croqui de vestido curto preto com recortes de coração vermelhos e mangas bufantes, com sandálias pretas.
+pose: a
+imagem: ./croqui.jpg
+alt: "Croqui de vestido curto preto com recortes de coração vermelhos e mangas bufantes, com sandálias pretas."
 paleta:
-  - hex: "#242424"
+  - hex: "#201f1f"
     nome: Preto
-  - hex: "#c4353b"
+  - hex: "#c3363c"
     nome: Vermelho
 ---

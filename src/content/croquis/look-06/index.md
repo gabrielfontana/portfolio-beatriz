@@ -1,11 +1,12 @@
 ---
 titulo: Look 06
 ordem: 6
-imagem: ./croqui.jpeg
-alt: Croqui de macaquinho amarelo com alças de laço e pespontos, bolsa azul transversal e sapatos de coração vermelhos.
+pose: a
+imagem: ./croqui.jpg
+alt: "Croqui de vestido curto bege de mangas curtas com amarrações nas laterais, bolsa e sapatos de coração vermelhos."
 paleta:
-  - hex: "#f4bf58"
+  - hex: "#dacfb1"
     nome: Amarelo
-  - hex: "#c6363c"
+  - hex: "#bc343a"
     nome: Vermelho
 ---

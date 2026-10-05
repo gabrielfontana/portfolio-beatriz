@@ -1,11 +1,12 @@
 ---
 titulo: Look 09
 ordem: 9
-imagem: ./croqui.jpeg
-alt: Croqui de macacão pantacourt vermelho com estampa branca em zigue-zague, alça única e laço no ombro.
+pose: b
+imagem: ./croqui.jpg
+alt: "Croqui de macaquinho amarelo com alças de laço e pespontos, bolsa azul transversal e sapatos de coração vermelhos."
 paleta:
-  - hex: "#b24645"
+  - hex: "#edb855"
+    nome: Amarelo
+  - hex: "#be383e"
     nome: Vermelho
-  - hex: "#130d0b"
-    nome: Preto
 ---

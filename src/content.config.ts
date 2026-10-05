@@ -59,12 +59,16 @@ const sobre = defineCollection({
     }),
 });
 
+// Croquis do Sketchbook. `imagem` é GERADA pelo npm run croquis a partir do `original.*` da pasta
+// (alinhada pela cabeça num quadro comum + marca d'água); o original nunca é alterado.
 const croquis = defineCollection({
   loader: glob({ pattern: '*/index.md', base: './src/content/croquis' }),
   schema: ({ image }) =>
     z.object({
       titulo: z.string(),
       ordem: z.number().int(),
+      // Pose da figura: looks da mesma pose são o mesmo "manequim" no provador.
+      pose: z.enum(['a', 'b', 'c'], { message: 'A pose precisa ser a, b ou c' }),
       imagem: image(),
       alt: z.string().min(1, 'Descreva o croqui (texto alternativo)'),
       paleta: z
@@ -75,4 +79,42 @@ const croquis = defineCollection({
     }),
 });
 
-export const collections = { colecoes, pecas, sobre, croquis };
+// Desenhos à mão. Cada pasta é um grupo de folhas (ex.: croqui + fichas técnicas). As `folha-N.jpg`
+// são GERADAS a partir de `original-N.*` (giradas se pedido + marca d'água).
+const desenhos = defineCollection({
+  loader: glob({ pattern: '*/index.md', base: './src/content/desenhos' }),
+  schema: ({ image }) =>
+    z.object({
+      titulo: z.string(), // só para quem edita; não aparece no site
+      ordem: z.number().int(),
+      tipo: z.enum(['colorido', 'rascunho'], { message: 'O tipo precisa ser colorido ou rascunho' }),
+      // Desenho ao vivo (mesa de luz): a 1ª folha é desenhada na tela e as outras entram como fichas técnicas.
+      aoVivo: z.boolean().default(false),
+      folhas: z
+        .array(
+          z.object({
+            imagem: image(),
+            alt: z.string().min(1, 'Descreva a folha (texto alternativo)'),
+            girar: z.union([z.literal(0), z.literal(90), z.literal(180), z.literal(270)]).default(0),
+          }),
+        )
+        .min(1, 'O grupo precisa de pelo menos uma folha'),
+    }),
+});
+
+// Estudos do Sketchbook com leitura guiada. `imagem` é GERADA a partir do `original.*` (marca d'água).
+const estudos = defineCollection({
+  loader: glob({ pattern: '*/index.md', base: './src/content/estudos' }),
+  schema: ({ image }) =>
+    z.object({
+      ordem: z.number().int(),
+      imagem: image(),
+      alt: z.string().min(1, 'Descreva o estudo (texto alternativo)'),
+      // Pontos sobre as anotações do desenho: x e y em % da imagem, texto legível da anotação.
+      anotacoes: z
+        .array(z.object({ x: z.number().min(0).max(100), y: z.number().min(0).max(100), texto: z.string().min(1) }))
+        .min(1, 'O estudo precisa de pelo menos uma anotação'),
+    }),
+});
+
+export const collections = { colecoes, pecas, sobre, croquis, desenhos, estudos };

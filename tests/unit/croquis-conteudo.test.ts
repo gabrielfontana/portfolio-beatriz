@@ -11,7 +11,7 @@ describe('paletas dos croquis publicados', () => {
   for (const look of readdirSync(raiz).sort()) {
     it(`${look}: só cores principais (nem ínfimas, nem de traço/contorno)`, async () => {
       const paleta = lerPaleta(readFileSync(join(raiz, look, 'index.md'), 'utf8'));
-      const medidas: MedidaCor[] = await medirPaleta(join(raiz, look, 'croqui.jpeg'), paleta);
+      const medidas: MedidaCor[] = await medirPaleta(join(raiz, look, 'croqui.jpg'), paleta);
       const fora = paleta.filter((_: unknown, i: number) => !ehPrincipal(medidas[i]));
       const detalhe = medidas.map((m) => `${(m.area * 100).toFixed(1)}%/${(m.solida * 100).toFixed(2)}%`).join(' · ');
       expect(fora, detalhe).toEqual([]);

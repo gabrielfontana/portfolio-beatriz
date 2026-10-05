@@ -1,0 +1,97 @@
+---
+interface Folha {
+  src: string;
+  largura: number;
+  altura: number;
+  alt: string;
+}
+interface Grupo {
+  id: string;
+  tipo: 'colorido' | 'rascunho';
+  folhas: Folha[];
+  /** Folhas do grupo para o visualizador (JSON). */
+  visor: string;
+}
+interface Props {
+  grupos: Grupo[];
+}
+const { grupos } = Astro.props;
+---
+<!-- Varal: os desenhos ficam pendurados num fio (role para o lado). Folhas do mesmo grupo vêm presas
+     por um clipe. O script faz o varal balançar com a rolagem e abre a folha tocada no visualizador. -->
+<div class="varal" data-varal>
+  <div class="varal__trilho" data-trilho tabindex="0" role="region" aria-label="Varal de desenhos à mão (role para o lado)">
+    <ul class="varal__fila">
+      {grupos.map((g) => {
+        const [primeira] = g.folhas;
+        const deitada = primeira.largura > primeira.altura;
+        return (
+          <li class="pendurado" data-pendurado data-deitada={deitada ? '' : undefined}>
+            <span class="pregador pregador--e" aria-hidden="true"></span>
+            <span class="pregador pregador--d" aria-hidden="true"></span>
+            <button
+              type="button"
+              class="grupo"
+              id={g.id}
+              data-grupo
+              data-tipo={g.tipo}
+              data-folhas={g.visor}
+              style={`aspect-ratio: ${primeira.largura} / ${primeira.altura}`}
+            >
+              {g.folhas.length > 1 && <span class="clipe" aria-hidden="true"></span>}
+              {g.folhas.map((f, i) =>
+                i === 0 ? (
+                  <span class="folha folha--topo">
+                    {g.tipo === 'colorido' && <img class="folha__traco" src={f.src} alt="" aria-hidden="true" loading="lazy" decoding="async" />}
+                    <img class="folha__cor" src={f.src} alt={f.alt} loading="lazy" decoding="async" />
+                  </span>
+                ) : (
+                  <span class="folha" style={`--k: ${i}`} aria-hidden="true">
+                    <img src={f.src} alt="" loading="lazy" decoding="async" />
+                  </span>
+                ),
+              )}
+              {g.folhas.length > 1 && <span class="sr-only">{`, ${g.folhas.length} folhas`}</span>}
+            </button>
+          </li>
+        );
+      })}
+    </ul>
+  </div>
+</div>
+
+<style>
+  .varal { margin-inline: calc(-1 * var(--gutter)); }
+  .varal__trilho { overflow-x: auto; overflow-y: hidden; padding: 2.75rem var(--gutter) 3.5rem; scrollbar-width: thin; cursor: grab; }
+  .varal__trilho:focus-visible { outline: 2px solid var(--tinta); outline-offset: -4px; }
+  .varal__trilho.arrastando { cursor: grabbing; }
+  .varal__fila { position: relative; display: flex; align-items: flex-start; gap: 2.6rem; width: max-content; list-style: none; margin: 0; padding: 0 1.5rem; }
+  /* o fio */
+  .varal__fila::before { content: ''; position: absolute; left: 0; right: 0; top: -1rem; height: 2px; background: #7a6a55; }
+  .pendurado { position: relative; width: clamp(170px, 20vw, 240px); transform-origin: 50% -1rem; rotate: var(--balanco, 0deg); }
+  .pendurado[data-deitada] { width: clamp(240px, 28vw, 340px); }
+  .pregador { position: absolute; z-index: 6; top: -1.6rem; width: 10px; height: 34px; background: #c9a36b; border-radius: 3px; box-shadow: inset -2px 0 #0002; }
+  .pregador--e { left: 18%; }
+  .pregador--d { right: 18%; }
+
+  .grupo { position: relative; display: block; width: 100%; padding: 0; border: 0; background: none; cursor: zoom-in; }
+  .grupo:focus-visible { outline: 3px solid var(--vermelho-texto); outline-offset: 4px; }
+  .folha { position: absolute; inset: 0; background: #fff; overflow: hidden; box-shadow: 0 1px 3px #0003, 0 6px 16px #0001; }
+  .folha img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+  .folha--topo { z-index: 1; }
+  /* folhas de trás aparecem um pouco, tortas */
+  .folha:not(.folha--topo) { z-index: 0; translate: calc(var(--k) * 8px) calc(var(--k) * 6px); rotate: calc(var(--k) * 2.2deg); }
+  .clipe { position: absolute; z-index: 5; top: -14px; left: 22%; width: 16px; height: 46px; border: 3px solid #8a8f96; border-radius: 9px; }
+  .clipe::after { content: ''; position: absolute; inset: 6px 2px 10px; border: 2px solid #8a8f96; border-radius: 6px; }
+
+  /* Traço → cor: nas folhas coloridas, o grafite fica por baixo e a cor desce quando a folha aparece
+     (o script põe data-revelada="nao" e depois "sim"; sem script, a cor já está lá). */
+  .folha__traco { filter: grayscale(1) contrast(1.6) brightness(1.08); }
+  .grupo[data-revelada='nao'] .folha__cor { clip-path: inset(0 0 100% 0); }
+  .grupo[data-revelada='sim'] .folha__cor { clip-path: inset(0); transition: clip-path 1.4s cubic-bezier(0.6, 0, 0.2, 1); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pendurado { rotate: 0deg; }
+    .grupo .folha__cor { clip-path: none !important; transition: none !important; }
+  }
+</style>

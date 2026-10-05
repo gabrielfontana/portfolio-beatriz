@@ -1,13 +1,14 @@
 ---
 titulo: Look 03
 ordem: 3
-imagem: ./croqui.jpeg
-alt: Croqui de jaqueta e minissaia jeans com bolsos em forma de coração e bolsa vermelha de coração.
+pose: a
+imagem: ./croqui.jpg
+alt: "Croqui de blusa vermelha de manga longa com recorte assimétrico no decote, minissaia jeans com fivela de coração e bolsa vermelha de coração."
 paleta:
-  - hex: "#1375b9"
-    nome: Azul
-  - hex: "#0d0a0a"
-    nome: Preto
-  - hex: "#aa2d33"
+  - hex: "#bd373d"
     nome: Vermelho
+  - hex: "#1676bb"
+    nome: Azul
+  - hex: "#1a0b0a"
+    nome: Preto
 ---

@@ -1,9 +1,10 @@
 ---
 titulo: Look 07
 ordem: 7
-imagem: ./croqui.jpeg
-alt: Croqui de macacão azul de pernas amplas com decote assimétrico e recorte lateral na cintura.
+pose: a
+imagem: ./croqui.jpg
+alt: "Croqui de camisa branca de mangas longas com calça pantalona jeans de barra recortada e sapatos amarelos."
 paleta:
-  - hex: "#0f72b7"
+  - hex: "#126aa8"
     nome: Azul
 ---

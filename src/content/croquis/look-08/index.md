@@ -1,11 +1,12 @@
 ---
 titulo: Look 08
 ordem: 8
-imagem: ./croqui.jpeg
-alt: Croqui de macacão preto tomara que caia com corpete vermelho em forma de coração.
+pose: b
+imagem: ./croqui.jpg
+alt: "Croqui de conjunto de jaqueta curta e minissaia transpassada com estampa azul e branca de corações, com argolas douradas."
 paleta:
-  - hex: "#030202"
+  - hex: "#0d3d92"
+    nome: Azul-marinho
+  - hex: "#0d0d13"
     nome: Preto
-  - hex: "#c3353b"
-    nome: Vermelho
 ---

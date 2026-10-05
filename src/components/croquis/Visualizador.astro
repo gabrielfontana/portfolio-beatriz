@@ -1,0 +1,109 @@
+---
+// Visualizador das folhas à mão (um só por página; o script preenche com as folhas do grupo aberto).
+---
+<dialog class="visor" id="visualizador" aria-label="Desenho ampliado">
+  <div class="visor__fundo" data-fundo></div>
+  <div class="visor__grade">
+    <div class="visor__topo" data-controle>
+      <p class="visor__contador" data-contador aria-live="polite"></p>
+      <button type="button" class="visor__botao" data-fechar>Fechar</button>
+    </div>
+    <div class="visor__palco" data-palco>
+      <div class="visor__mesa" data-mesa>
+        <!-- a próxima folha espia atrás da atual; tocar nela traz para a frente -->
+        <button type="button" class="visor__proxima" data-proxima data-controle aria-label="Próxima folha"><img alt="" /></button>
+        <div class="visor__folha" data-folha>
+          <img class="visor__traco" data-traco alt="" aria-hidden="true" />
+          <img class="visor__cor" data-cor alt="" />
+          <div class="visor__linha" aria-hidden="true"></div>
+        </div>
+      </div>
+      <div class="visor__lupa" data-lupa aria-hidden="true"></div>
+    </div>
+    <div class="visor__base" data-controle>
+      <div class="visor__miniaturas" data-miniaturas role="group" aria-label="Folhas deste desenho"></div>
+      <label class="visor__corte" data-corte-rotulo>
+        <span>traço</span>
+        <input type="range" data-corte min="0" max="100" value="100" aria-label="Comparar o traço a lápis com a cor" />
+        <span>cor</span>
+      </label>
+      <p class="visor__dica">
+        <span class="visor__dica--mouse">Passe o mouse sobre o desenho para ver os detalhes.</span>
+        <span class="visor__dica--toque">Arraste para trocar de folha; segure para ver os detalhes.</span>
+      </p>
+    </div>
+  </div>
+</dialog>
+
+<style>
+  /* A página continua por trás, clara e desfocada. */
+  .visor {
+    width: 100vw; height: 100dvh; max-width: none; max-height: none; margin: 0; padding: 0; border: 0;
+    background: transparent; color: var(--tinta); overflow: hidden;
+  }
+  .visor::backdrop { background: transparent; }
+  .visor__fundo {
+    position: absolute; inset: 0; background: #f6efe4b3;
+    -webkit-backdrop-filter: blur(14px) saturate(0.75); backdrop-filter: blur(14px) saturate(0.75);
+  }
+  .visor__grade { position: relative; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; height: 100%; }
+  .visor__topo { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.75rem var(--gutter); }
+  .visor__contador { margin: 0; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.08em; }
+  .visor__botao, .visor__miniaturas :global(button) {
+    font: inherit; color: var(--tinta); background: var(--papel); border: 2px solid var(--tinta); cursor: pointer;
+  }
+  .visor__botao { padding: 0.4rem 0.9rem; font-size: 0.85rem; font-weight: 700; }
+  .visor__botao:hover { background: var(--tinta); color: var(--papel); }
+
+  .visor__palco { position: relative; display: grid; place-items: center; overflow: hidden; touch-action: none; }
+  /* largura pela proporção da folha (com teto de altura e de largura): a folha preenche a mesa sem faixas */
+  .visor__mesa { position: relative; width: min(80vw, calc(68dvh * var(--ar, 0.707))); aspect-ratio: var(--ar, 0.707); }
+  @media (max-width: 767px) { .visor__mesa { width: min(84vw, calc(62dvh * var(--ar, 0.707))); } }
+  .visor__folha { position: absolute; inset: 0; z-index: 2; background: #fff; box-shadow: 0 30px 80px #0000002e, 0 4px 12px #0000001f; }
+  .visor__folha img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; user-select: none; -webkit-user-drag: none; }
+  .visor__traco { filter: grayscale(1) contrast(1.6) brightness(1.08); }
+  .visor__cor { clip-path: inset(0 calc(100% - var(--corte, 100%)) 0 0); }
+  .visor__linha { position: absolute; top: 0; bottom: 0; left: var(--corte, 100%); width: 2px; background: var(--vermelho-texto); pointer-events: none; }
+  .visor__folha[data-corte='100'] .visor__linha { display: none; }
+  .visor__proxima {
+    position: absolute; inset: 0; z-index: 1; padding: 0; border: 0; background: #fff; cursor: pointer;
+    transform: translateX(17%) rotate(3.5deg) scale(0.94); transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+    box-shadow: 0 10px 30px #00000026;
+  }
+  .visor__proxima[hidden] { display: none; }
+  .visor__proxima:hover, .visor__proxima:focus-visible { transform: translateX(23%) rotate(5deg) scale(0.95); }
+  .visor__proxima img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  /* seta grande na borda que aparece, para ficar óbvio que dá para avançar */
+  .visor__proxima::after {
+    content: '›'; position: absolute; right: -22px; top: 50%; translate: 0 -50%; width: 44px; height: 44px; border-radius: 50%;
+    background: var(--tinta); color: var(--papel); font-size: 1.8rem; line-height: 40px; text-align: center; box-shadow: 0 4px 12px #0003;
+  }
+  /* a lupa fica acima da folha (que tem z-index por causa da próxima folha espiando) */
+  .visor__lupa {
+    position: absolute; z-index: 30; width: 220px; height: 220px; border-radius: 50%; border: 3px solid #fff;
+    box-shadow: 0 6px 24px #0008; pointer-events: none; background-repeat: no-repeat; background-color: #fff;
+    display: none; translate: -50% -50%;
+  }
+  .visor__lupa.ativa { display: block; }
+
+  .visor__base { display: grid; justify-items: center; gap: 0.6rem; padding: 0.6rem var(--gutter) 1rem; }
+  .visor__miniaturas { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.6rem; }
+  .visor__miniaturas[hidden] { display: none; }
+  .visor__miniaturas :global(button) { width: 48px; padding: 0; border-color: transparent; background: #fff; box-shadow: 0 2px 6px #0002; transition: transform 0.2s, border-color 0.2s; }
+  .visor__miniaturas :global(button[aria-current="true"]) { border-color: var(--tinta); transform: translateY(-5px); }
+  .visor__miniaturas :global(img) { width: 100%; display: block; }
+  .visor__corte { display: flex; align-items: center; gap: 0.6rem; font-size: 0.85rem; font-weight: 700; }
+  .visor__corte[hidden] { display: none; }
+  .visor__corte input { width: min(320px, 55vw); accent-color: var(--tinta); }
+  .visor__dica { margin: 0; font-size: 0.8rem; text-align: center; }
+  .visor__dica--toque { display: none; }
+  @media (hover: none) {
+    .visor__dica--mouse { display: none; }
+    .visor__dica--toque { display: inline; }
+    .visor__lupa { width: 160px; height: 160px; translate: -50% -130%; }
+  }
+  @media (max-width: 767px) {
+    .visor__proxima { transform: translateX(9%) rotate(3deg) scale(0.95); }
+    .visor__proxima::after { right: -14px; }
+  }
+</style>

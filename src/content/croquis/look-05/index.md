@@ -1,11 +1,14 @@
 ---
 titulo: Look 05
 ordem: 5
-imagem: ./croqui.jpeg
-alt: Croqui de vestido curto azul-claro frente única com recortes laterais e detalhe de coração na cintura, com botas pretas.
+pose: a
+imagem: ./croqui.jpg
+alt: "Croqui de vestido curto azul com recorte branco no busto e bolero preto de mangas longas, com sandálias pretas."
 paleta:
-  - hex: "#cbe1f9"
-    nome: Azul-claro
-  - hex: "#0b0a09"
+  - hex: "#181818"
     nome: Preto
+  - hex: "#0f71b5"
+    nome: Azul
+  - hex: "#cce1f6"
+    nome: Azul-claro
 ---

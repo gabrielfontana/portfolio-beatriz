@@ -32,21 +32,74 @@ Crie `src/content/colecoes/<nome>.md` com `nome`, `cor` (hex **entre aspas**, ex
 - WhatsApp, e-mail, Instagram, edição da capa e chamadas: `src/data/site.json`.
 - Imagem de prévia de link (WhatsApp, redes): `src/assets/og-padrao.jpg` (1200×630). Peças, coleções e a página Sobre usam a própria foto.
 
-## Croquis e paletas
-Cada croqui fica em `src/content/croquis/look-NN/` com `croqui.jpeg` e um `index.md`:
+## Página de croquis
+A página tem três partes, e o conteúdo de cada uma fica numa pasta própria:
+- **Desenhados no Sketchbook:** o provador.
+- **Desenhados à mão:** o desenho ao vivo e o varal.
+- **Estudos no Sketchbook:** as anotações guiadas.
+
+**Regra de ouro:** a imagem que você coloca se chama `original…` e **nunca é alterada**. As imagens que o site mostra são **geradas** a partir dela pelo `npm run croquis`. Esse comando alinha os croquis, gira as folhas quando pedido e grava a marca d'água "Beatriz Chiusi". Depois de mexer em qualquer imagem ou `index.md` dessas pastas, rode:
+```bash
+npm run croquis
+```
+
+### Look do Sketchbook (provador)
+Crie `src/content/croquis/look-NN/` com o arquivo do app como `original.png` (ou `.jpg`) e um `index.md`:
 ```md
 ---
-titulo: Look 10
-ordem: 10
-imagem: ./croqui.jpeg
+titulo: Look 22
+ordem: 22
+pose: a
+imagem: ./croqui.jpg
 alt: Descrição do desenho para quem não enxerga.
 ---
 ```
-1. Use nomes de arquivo em minúsculas (`croqui.jpeg`) e fotos em JPG/PNG; HEIC precisa ser convertido.
-2. Rode `npm run paletas`. O script sugere de 1 a 4 cores principais da roupa, grava em `paleta:` no `index.md` e gera as máscaras `mascara-*.png` do efeito de destaque. Ficam de fora fundo, pele, cabelo, cores ínfimas (menos de 5% da roupa) e cores que só aparecem em traços, contornos e costuras.
-3. Não gostou de uma cor? Edite `paleta:` à mão (hex **entre aspas**, ex.: `"#bf343a"`) e rode `npm run paletas` de novo: sua paleta é mantida e só as máscaras são refeitas.
-   Se uma cor escrita à mão for ínfima ou só de traço, o script avisa (sem mexer na paleta) para você tirá-la.
-4. Se esquecer de rodar o script, o build avisa qual look e qual cor precisam dele.
+- **`pose`:** diz em qual manequim o look entra.
+  - `a`: braço aberto, cabelo preso;
+  - `b`: mãos na cintura;
+  - `c`: em pé, braços soltos.
+  - Os looks da mesma pose trocam de roupa "no mesmo corpo". O script alinha todos pela cabeça.
+- **Paleta:** o `npm run croquis` também sugere a paleta (de 1 a 4 cores principais da roupa), grava em `paleta:` e gera as máscaras `mascara-*.png` do destaque de cor.
+  - Ficam de fora fundo, pele, cabelo, cores ínfimas e cores que só aparecem em traços.
+  - Não gostou de uma cor? Edite `paleta:` à mão (hex **entre aspas**, ex.: `"#bf343a"`) e rode de novo. Sua paleta é mantida e só as máscaras são refeitas.
+
+### Desenho à mão (desenho ao vivo e varal)
+Cada pasta em `src/content/desenhos/` é um grupo de folhas presas juntas, como o croqui com as fichas técnicas. As folhas são `original-1.jpg`, `original-2.jpg`… e o `index.md` fica assim:
+```md
+---
+titulo: "Look completo 4"   # só para você; não aparece no site
+ordem: 4
+tipo: colorido              # ou rascunho (lápis: vai para o fim do varal, sem efeito de grafite)
+aoVivo: true                # opcional: entra como "desenho ao vivo" na mesa de luz
+folhas:
+  - imagem: ./folha-1.jpg
+    alt: "Croqui de …"
+  - imagem: ./folha-2.jpg
+    alt: "Ficha técnica, frente: …"
+    girar: 270              # opcional: 90, 180 ou 270 (sentido horário) para folha escaneada de lado
+---
+```
+- **Desenho ao vivo:** a 1ª folha é desenhada na tela, e as outras entram ao lado como fichas técnicas.
+- **Varal:** sem `aoVivo`, o grupo vai para o varal.
+- **Manchas amarelas de papel antigo:** os originais de hoje já foram limpos. Se chegar um desenho novo manchado, peça a limpeza antes de colocar.
+
+### Estudo do Sketchbook (leitura guiada)
+Crie `src/content/estudos/estudo-N/` com `original.png` e um `index.md`:
+```md
+---
+ordem: 8
+imagem: ./prancha.jpg
+alt: "Estudo de …"
+anotacoes:
+  - x: 24        # posição do ponto, em % da largura da imagem
+    y: 11        # em % da altura
+    texto: "O que a anotação diz, escrito por extenso."
+---
+```
+Os pontos aparecem numerados na ordem da lista. Prefira posicioná-los **ao lado** da anotação escrita, não em cima dela. **Os textos das anotações de hoje foram transcritos dos desenhos e precisam ser conferidos pela Beatriz.**
+
+### Se esquecer de rodar o script
+O build e os testes avisam qual pasta e qual arquivo faltam.
 
 ## Antes de publicar
 ```bash

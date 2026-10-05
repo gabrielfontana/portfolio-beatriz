@@ -10,14 +10,17 @@ interface Props {
   alt: string;
   imagem: ImageMetadata;
   cores: Array<CorDaPaleta & { chave: string; mascara: ImageMetadata }>;
+  /** Look vestido no manequim quando a página abre. */
+  atual?: boolean;
 }
-const { id, titulo, alt, imagem, cores } = Astro.props;
+const { id, titulo, alt, imagem, cores, atual = false } = Astro.props;
 // Base e camadas de realce usam o MESMO arquivo, para baixar uma vez só.
 const base = await getImage({ src: imagem, width: Math.min(800, imagem.width), format: 'webp' });
 const mascaras = await Promise.all(cores.map((c) => getImage({ src: c.mascara, format: 'png' })));
 ---
-<article class="croqui" id={id} data-croqui>
-  <p class="croqui__rotulo">{titulo}</p>
+<!-- Um look do provador. No manequim os looks ficam empilhados (o palco na mesma célula da grade,
+     a paleta embaixo) e só o atual aparece; sem JS, viram uma grade com todos. -->
+<article class="croqui" id={id} data-croqui data-atual={atual ? '' : undefined} aria-label={titulo}>
   <div class="croqui__palco" style={`aspect-ratio: ${imagem.width} / ${imagem.height}`}>
     <img
       class="croqui__base"
@@ -25,7 +28,7 @@ const mascaras = await Promise.all(cores.map((c) => getImage({ src: c.mascara, f
       alt={alt}
       width={base.attributes.width}
       height={base.attributes.height}
-      loading="lazy"
+      loading={atual ? 'eager' : 'lazy'}
       decoding="async"
     />
     {cores.map((c, i) => (
@@ -53,14 +56,12 @@ const mascaras = await Promise.all(cores.map((c) => getImage({ src: c.mascara, f
 </script>
 
 <style>
-  .croqui { display: grid; gap: 0.75rem; align-content: end; }
-  .croqui__rotulo {
-    margin: 0; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase;
-  }
-  /* multiply: o branco do papel do desenho some no creme do site. */
-  .croqui__palco { position: relative; width: 100%; mix-blend-mode: multiply; transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s; }
+  .croqui { display: grid; gap: 0.75rem; align-content: start; }
+  /* O palco tem fundo próprio (papel) e os desenhos se misturam a ele com multiply: o branco do
+     JPEG some no papel e, empilhado no manequim, o look de cima cobre por inteiro o de baixo. */
+  .croqui__palco { position: relative; width: 100%; background: var(--papel); isolation: isolate; }
   .croqui__base, .croqui__realce {
-    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill;
+    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; mix-blend-mode: multiply;
   }
   .croqui__base { transition: filter 0.3s, opacity 0.3s; }
   .croqui__palco[data-destacando] .croqui__base { filter: grayscale(1); opacity: 0.35; }
@@ -73,16 +74,7 @@ const mascaras = await Promise.all(cores.map((c) => getImage({ src: c.mascara, f
   .croqui__realce.ativo { opacity: 1; }
   .croqui__paleta { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); gap: 0.25rem; }
 
-  /* Modos do line-up (classes postas pelo módulo de animação). */
-  /* Altura que deixa caber bolinhas, rótulo, paleta (até 4 linhas num card estreito) e o scale de 1.08. */
-  :global(.lineup--desfile) .croqui__palco { height: min(58vh, calc((94vh - 23rem) / 1.08)); width: auto; }
-  :global(.lineup--desfile) .croqui:not([data-em-foco]) .croqui__palco,
-  :global(.lineup--carrossel) .croqui:not([data-em-foco]) .croqui__palco { opacity: 0.5; }
-  :global(.lineup--desfile) .croqui[data-em-foco] .croqui__palco { transform: scale(1.08); transform-origin: bottom center; }
-  .croqui[data-em-foco] .croqui__rotulo { color: var(--vermelho-texto); }
-  .croqui[data-travado] { cursor: pointer; }
-
   @media (prefers-reduced-motion: reduce) {
-    .croqui__palco, .croqui__base, .croqui__realce { transition: none; }
+    .croqui__base, .croqui__realce { transition: none; }
   }
 </style>

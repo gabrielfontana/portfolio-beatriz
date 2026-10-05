@@ -1,0 +1,99 @@
+---
+import type { ImageMetadata } from 'astro';
+import { getImage } from 'astro:assets';
+import { TELA_AO_VIVO } from '../../lib/ao-vivo';
+
+interface Folha {
+  imagem: ImageMetadata;
+  alt: string;
+}
+interface Props {
+  id: string;
+  folhas: Folha[];
+  /** URLs das camadas geradas (lápis com marca e mapa de tempo). */
+  lapis: string;
+  tempo: string;
+  /** Folhas do grupo para o visualizador (JSON). */
+  visor: string;
+}
+const { id, folhas, lapis, tempo, visor } = Astro.props;
+const [croqui, ...fichas] = folhas;
+// A cor da tela usa o mesmo tamanho das camadas geradas.
+const cor = await getImage({ src: croqui.imagem, width: TELA_AO_VIVO.largura, height: TELA_AO_VIVO.altura, format: 'webp' });
+const final = await getImage({ src: croqui.imagem, width: Math.min(1000, croqui.imagem.width), format: 'webp' });
+const fichasImg = await Promise.all(fichas.map((f) => getImage({ src: f.imagem, width: Math.min(700, f.imagem.width), format: 'webp' })));
+---
+<!-- Mesa de luz: o croqui é desenhado na tela (lápis, depois marcador) quando aparece, e as fichas
+     técnicas entram ao lado. Sem JS ou com movimento reduzido, tudo já aparece pronto. -->
+<figure class="ao-vivo" id={id} data-ao-vivo data-cor={cor.src} data-lapis={lapis} data-tempo={tempo} data-folhas={visor}>
+  <div class="ao-vivo__mesa">
+    <button type="button" class="ao-vivo__folha" data-abrir="0">
+      <img
+        class="ao-vivo__final"
+        src={final.src}
+        alt={croqui.alt}
+        width={final.attributes.width}
+        height={final.attributes.height}
+        loading="lazy"
+        decoding="async"
+      />
+      <canvas class="ao-vivo__tela" width={TELA_AO_VIVO.largura} height={TELA_AO_VIVO.altura} aria-hidden="true"></canvas>
+    </button>
+    {fichas.length > 0 && (
+      <ul class="ao-vivo__fichas" style={`--n: ${fichas.length}`}>
+        {fichas.map((f, i) => (
+          <li class="ao-vivo__ficha" style={`--i: ${i}`}>
+            <button type="button" data-abrir={i + 1}>
+              <img src={fichasImg[i].src} alt={f.alt} width={fichasImg[i].attributes.width} height={fichasImg[i].attributes.height} loading="lazy" decoding="async" />
+            </button>
+          </li>
+        ))}
+      </ul>
+    )}
+  </div>
+</figure>
+
+<style>
+  /* Mesa de luz de ponta a ponta: grafite azulado, a folha iluminada por baixo. */
+  .ao-vivo {
+    margin: 0; padding: clamp(2rem, 6vh, 4rem) var(--gutter);
+    /* as fichas esperam fora da tela antes de entrar: a mesa recorta (sem rolagem lateral na página) */
+    overflow: clip;
+    background: radial-gradient(ellipse 60% 70% at 40% 50%, #3d434d 0%, #2a2e35 55%, #23262c 100%);
+  }
+  .ao-vivo + .ao-vivo { border-top: 1px solid #ffffff14; }
+  .ao-vivo__mesa {
+    --altura: min(76vh, 760px);
+    display: flex; align-items: center; justify-content: center; gap: clamp(1rem, 4vw, 4rem);
+    max-width: var(--max); margin-inline: auto; min-height: var(--altura);
+  }
+  .ao-vivo button { padding: 0; border: 0; background: #fff; cursor: zoom-in; display: block; }
+  .ao-vivo__folha {
+    position: relative; flex: none; height: var(--altura); aspect-ratio: 700 / 990;
+    box-shadow: 0 0 0 1px #ffffff33, 0 0 90px 14px #fff8e62e;
+  }
+  .ao-vivo__final, .ao-vivo__tela { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .ao-vivo__final { object-fit: contain; }
+  .ao-vivo__tela { display: none; }
+  /* Preparado pelo script: folha em branco até o desenho começar. */
+  .ao-vivo--preparado .ao-vivo__final { opacity: 0; }
+  .ao-vivo--preparado .ao-vivo__tela { display: block; }
+
+  .ao-vivo__fichas {
+    position: relative; list-style: none; margin: 0; padding: 0; flex: none;
+    height: calc(var(--altura) * 0.82); width: calc(var(--altura) * 0.82 * 0.707 * (1 + (var(--n) - 1) * 0.45));
+  }
+  .ao-vivo__ficha {
+    position: absolute; top: 0; left: calc(var(--i) * var(--altura) * 0.82 * 0.707 * 0.45);
+    height: 100%; aspect-ratio: 2480 / 3507;
+    rotate: calc(-4deg + var(--i) * 4deg); box-shadow: 0 10px 30px #0006;
+  }
+  .ao-vivo__ficha button, .ao-vivo__ficha img { width: 100%; height: 100%; }
+  .ao-vivo__ficha img { object-fit: contain; display: block; }
+
+  @media (max-width: 767px) {
+    .ao-vivo__mesa { --altura: min(62vh, 120vw); flex-direction: column; gap: 0; min-height: 0; }
+    .ao-vivo__fichas { height: auto; width: 100%; display: flex; justify-content: center; margin-top: -4vh; }
+    .ao-vivo__ficha { position: relative; left: auto; height: auto; width: 34vw; margin-inline: -4vw; }
+  }
+</style>
