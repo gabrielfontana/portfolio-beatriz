@@ -1,131 +1,54 @@
 ---
-import { getCollection } from 'astro:content';
+// O site é uma página só: abre com um trecho do sobre, segue com os croquis e fecha com o contato
+// (o contato é o rodapé do layout, em src/components/Contato.astro).
+import { getCollection, getEntry, render } from 'astro:content';
 import { Image } from 'astro:assets';
 import Revista from '../layouts/Revista.astro';
-import CardPeca from '../components/CardPeca.astro';
-import site from '../data/site.json';
-import { pecaDeCapa, porRecencia } from '../lib/colecoes';
+import SecaoCroquis from '../components/croquis/SecaoCroquis.astro';
 
-const pecas = await getCollection('pecas');
-const capa = pecaDeCapa(pecas);
-if (!capa) throw new Error('Adicione ao menos uma peça em src/content/pecas para montar a capa.');
-const destaques = pecas.filter((p) => p.id !== capa.id).sort(porRecencia).slice(0, 3);
-const letras = [...site.nome.toUpperCase()];
-const minis = (await getCollection('croquis')).sort((a, b) => a.data.ordem - b.data.ordem).slice(0, 5);
+const sobre = await getEntry('sobre', 'sobre');
+if (!sobre) throw new Error('Crie src/content/sobre/sobre.md');
+const { Content } = await render(sobre);
+const d = sobre.data;
+const primeiroLook = (await getCollection('croquis')).sort((a, b) => a.data.ordem - b.data.ordem)[0];
 ---
-<Revista>
-  <section class="capa" data-anim="capa">
-    <div class="container capa__topo">
-      <p class="kicker">{site.edicao}</p>
-      <p class="kicker">Modelagem · Corte · Costura</p>
+<Revista imagemOg={primeiroLook?.data.imagem}>
+  <section class="container sobre" id="sobre" aria-labelledby="t-sobre">
+    <div class="sobre__foto">
+      <Image
+        src={d.retrato}
+        alt={d.retratoAlt}
+        widths={[400, 700, 1000]}
+        sizes="(min-width: 768px) 40vw, 100vw"
+        loading="eager"
+        fetchpriority="high"
+      />
     </div>
-    <div class="container capa__palco">
-      <h1 class="capa__nome">
-        <span class="sr-only">{site.nome}</span>
-        <span class="capa__letras" aria-hidden="true">
-          {letras.map((l) => <span class="capa__letra" data-letra>{l}</span>)}
-        </span>
-      </h1>
-      <a href={`/pecas/${capa.id}`} class="capa__foto">
-        <Image
-          src={capa.data.capa}
-          alt={capa.data.capaAlt}
-          widths={[480, 800, 1200]}
-          sizes="(min-width: 768px) 40vw, 78vw"
-          loading="eager"
-          fetchpriority="high"
-        />
-      </a>
-      <ul class="capa__chamadas">
-        {site.chamadas.map((c, i) => (
-          <li data-chamada>
-            <a href={c.href}>
-              <span class="capa__num">{String(i + 1).padStart(2, '0')}</span>
-              <span>{c.texto}</span>
-            </a>
-          </li>
-        ))}
+    <div class="sobre__texto">
+      <h1 id="t-sobre" data-anim="revelar">{d.nome}</h1>
+      <p class="sobre__cargo">{d.cargo} · {d.cidade}</p>
+      <div class="sobre__lide"><Content /></div>
+      <ul class="sobre__habilidades" aria-label="Habilidades">
+        {d.habilidades.map((h) => <li>{h}</li>)}
       </ul>
+      <a class="botao" href="/cv-beatriz.pdf" download>Baixar currículo (PDF)</a>
     </div>
   </section>
 
-  {destaques.length > 0 && (
-    <section class="container destaques">
-      <h2 data-anim="revelar">Nesta edição</h2>
-      <div class="destaques__grade">
-        {destaques.map((p) => <CardPeca peca={p} />)}
-      </div>
-    </section>
-  )}
-  {minis.length > 0 && (
-    <section class="container prancha" aria-labelledby="t-prancha">
-      <p class="kicker">Prancha de croquis</p>
-      <h2 id="t-prancha" data-anim="revelar">Do papel para a passarela</h2>
-      <a class="prancha__fila" href="/croquis" aria-label="Abrir a prancha de croquis">
-        {minis.map((m) => (
-          <Image
-            data-croqui-mini
-            src={m.data.imagem}
-            alt=""
-            widths={[160, 240, 320]}
-            sizes="(min-width: 768px) 16vw, 18vw"
-          />
-        ))}
-      </a>
-      <a class="botao" href="/croquis">Ver a prancha completa →</a>
-    </section>
-  )}
+  <SecaoCroquis />
 </Revista>
 
 <style>
-  .prancha { padding-block: 3rem; border-top: 2px solid var(--tinta); background: var(--papel); }
-  .prancha h2 { margin-block: 0.5rem 2rem; font-style: italic; }
-  .prancha__fila { display: grid; grid-template-columns: repeat(5, 1fr); gap: clamp(0.5rem, 2vw, 2rem); align-items: end; margin-bottom: 2rem; }
-  .prancha__fila :global(img) { width: 100%; height: auto; mix-blend-mode: multiply; transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
-  .prancha__fila:hover :global(img) { transform: translateY(-6px); }
-  .prancha__fila:hover :global(img:nth-child(even)) { transform: translateY(6px); }
-  .capa { padding-block: 1.25rem 3rem; overflow: hidden; }
-  .capa__topo {
-    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem 1rem;
-    border-bottom: 2px solid var(--tinta); padding-bottom: 0.75rem;
-  }
-  .capa__palco { display: grid; margin-top: 1rem; }
-  .capa__nome {
-    grid-area: 1 / 1; z-index: 1;
-    font-size: clamp(3.25rem, 18.5vw, 17rem); line-height: 0.85; letter-spacing: -0.02em;
-    color: var(--rosa); text-align: center;
-  }
-  .capa__letras { display: inline-flex; overflow: hidden; padding-block: 0.04em; }
-  .capa__letra { display: inline-block; }
-  .capa__foto {
-    grid-area: 1 / 1; z-index: 2; justify-self: center;
-    width: min(78%, 520px);
-    margin-top: clamp(3.5rem, 15vw, 9rem);
-    transform: rotate(-2deg);
-    box-shadow: 12px 12px 0 var(--cobalto);
-  }
-  .capa__chamadas { list-style: none; padding: 0; margin: 2rem 0 0; display: grid; gap: 1rem; }
-  .capa__chamadas a {
-    display: flex; gap: 0.75rem; align-items: baseline;
-    font-family: var(--fonte-display); font-size: clamp(1.25rem, 2.4vw, 1.75rem); line-height: 1.15;
-    text-decoration: none;
-  }
-  .capa__chamadas a:hover { color: var(--vermelho-texto); }
-  .capa__num {
-    flex: none; font-family: var(--fonte-texto); font-size: 0.75rem; font-weight: 700;
-    background: var(--amarelo); padding: 0.1rem 0.4rem;
-  }
-  .destaques { padding-block: 3rem; }
-  .destaques h2 { margin-bottom: 2rem; font-style: italic; }
-  .destaques__grade { display: grid; gap: 2.5rem; }
-
+  .sobre { display: grid; gap: 2rem; padding-block: 2.5rem 3.5rem; scroll-margin-top: var(--altura-menu, 3.3rem); }
+  .sobre__foto { overflow: hidden; aspect-ratio: 4 / 5; border-radius: 4px; box-shadow: 0 2px 14px #0000001f; }
+  .sobre__foto :global(img) { width: 100%; height: 100%; object-fit: cover; }
+  .sobre__texto h1 { margin-block: 0.5rem; }
+  .sobre__cargo { font-family: var(--fonte-display); font-style: italic; font-size: 1.35rem; color: var(--grafite); margin: 0 0 1.5rem; }
+  .sobre__lide { font-size: 1.2rem; max-width: 52ch; margin-bottom: 1.5rem; }
+  .sobre__habilidades { list-style: none; margin: 0 0 2rem; padding: 0; display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .sobre__habilidades li { padding: 0.3rem 0.8rem; border: 1px solid var(--linha); border-radius: 999px; font-size: 0.85rem; }
   @media (min-width: 768px) {
-    .capa__foto { justify-self: end; margin-right: 6%; width: min(40%, 520px); }
-    .capa__chamadas {
-      grid-area: 1 / 1; z-index: 3; align-self: end; justify-self: start;
-      max-width: min(42%, 30ch); margin: 0; padding-bottom: 2rem;
-    }
-    .destaques__grade { grid-template-columns: repeat(3, 1fr); }
-    .destaques__grade > :nth-child(2) { margin-top: 4rem; }
+    .sobre { grid-template-columns: 1fr 1.2fr; align-items: center; gap: 4rem; }
+    .sobre__foto { max-height: 78vh; }
   }
 </style>

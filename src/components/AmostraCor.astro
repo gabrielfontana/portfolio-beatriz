@@ -30,7 +30,7 @@ const { hex, nome, chave, titulo, indice = 0 } = Astro.props;
   .amostra:hover, .amostra[aria-pressed='true'] { border-color: var(--tinta); }
   .amostra__bola {
     grid-row: span 2; width: 2.1rem; height: 2.1rem; border-radius: 50%;
-    background: var(--cor); border: 2px solid var(--tinta);
+    background: var(--cor); border: 1px solid var(--tinta);
     transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   }
   .amostra:hover .amostra__bola, .amostra[aria-pressed='true'] .amostra__bola { transform: scale(1.15); }

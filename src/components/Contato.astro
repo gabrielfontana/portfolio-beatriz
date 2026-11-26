@@ -1,0 +1,48 @@
+---
+import site from '../data/site.json';
+import { linkWhatsApp, linkInstagram } from '../lib/contato';
+
+const c = site.contatos;
+---
+<footer id="contato" class="contato" aria-labelledby="t-contato">
+  <div class="container contato__grade">
+    <div>
+      <p class="kicker">Contato</p>
+      <h2 id="t-contato" class="contato__titulo">Vamos conversar?</h2>
+      <p>Encomendas, colaborações e oportunidades de trabalho.</p>
+    </div>
+    <ul class="contato__lista">
+      <li>
+        <span class="kicker">WhatsApp</span>
+        <a href={linkWhatsApp(c.whatsapp, c.mensagemWhatsApp)} target="_blank" rel="noopener">{c.whatsapp}</a>
+      </li>
+      <li>
+        <span class="kicker">E-mail</span>
+        <a href={`mailto:${c.email}`}>{c.email}</a>
+      </li>
+      <li>
+        <span class="kicker">Instagram</span>
+        <a href={linkInstagram(c.instagram)} target="_blank" rel="noopener">{c.instagram}</a>
+      </li>
+    </ul>
+  </div>
+</footer>
+
+<style>
+  .contato { background: var(--papel-escuro); border-top: 1px solid var(--linha); padding-block: 4rem; margin-top: 4rem; }
+  .contato__grade { display: grid; gap: 2.5rem; }
+  .contato__titulo {
+    font-family: var(--fonte-display); font-style: italic;
+    font-size: clamp(2rem, 5vw, 3.2rem); font-weight: 400; line-height: 1.05; margin: 0.5rem 0 1rem;
+  }
+  .contato__lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 1.25rem; }
+  .contato__lista li { display: grid; gap: 0.25rem; }
+  .contato__lista a {
+    color: var(--tinta); font-family: var(--fonte-display); font-size: clamp(1.2rem, 2.6vw, 1.6rem);
+    text-decoration: none; overflow-wrap: anywhere;
+  }
+  .contato__lista a:hover { color: var(--vermelho-texto); text-decoration: underline; }
+  @media (min-width: 768px) {
+    .contato__grade { grid-template-columns: 1.2fr 1fr; }
+  }
+</style>

@@ -8,34 +8,28 @@ npm install      # só na primeira vez
 npm run dev      # abre em http://localhost:4321 e atualiza sozinho ao salvar
 ```
 
-## Adicionar uma peça
-1. Crie a pasta `src/content/pecas/<nome-da-peca>/` (sem acentos, com hífens). O nome vira a URL: `/pecas/<nome-da-peca>`.
-2. Coloque as fotos em JPG ou PNG dentro dela. Fotos HEIC do iPhone precisam ser convertidas para JPG antes.
-3. Crie `index.md` copiando o de `macacao-ponte` (mínimo) ou o de `vestido-aurora` (com galeria e processo).
-4. `colecao:` precisa ser o nome de um arquivo de `src/content/colecoes/` (sem `.md`).
-5. Toda foto precisa de um texto alternativo (`capaAlt`, `alt`) que descreva a imagem para quem não enxerga.
-6. `destaque: true` coloca a peça na capa do site. Use em uma peça só.
-7. Rode `npm run dev` e confira. Se faltar algum campo, o terminal diz qual.
+## Como o site está organizado
+O site é **uma página só** (`/`), lida de cima para baixo:
+1. **Sobre:** retrato, nome, um texto curto, habilidades e o botão do currículo.
+2. **Croquis:** o Sketchbook, os desenhos à mão e os estudos.
+3. **Contato:** WhatsApp, e-mail e Instagram, fechando a página.
 
-Galeria e processo são opcionais: sem eles, a página da peça simplesmente não mostra essas seções. O processo precisa das quatro etapas (`croqui`, `molde`, `costura`, `final`), cada uma com `imagem`, `alt` e `texto`.
-
-## Trocar placeholders por fotos reais
-Substitua o arquivo mantendo o mesmo nome (ex.: `capa.jpg`). O comando `npm run placeholders` **nunca** sobrescreve arquivos existentes. Ele só recria o que estiver faltando.
-
-## Nova coleção
-Crie `src/content/colecoes/<nome>.md` com `nome`, `cor` (hex **entre aspas**, ex.: `"#ff2e88"`), `ordem`, `ano`, `resumo` e um texto curto abaixo do `---`. A cor do texto sobre o bloco colorido é escolhida automaticamente para manter a leitura.
+O menu leva a cada uma dessas partes.
 
 ## Sobre, currículo e contatos
-- Entrevista, trajetória e habilidades: `src/content/sobre/sobre.md`. Em trabalho atual, use `fim: null`.
+- Nome, cargo, cidade, texto de abertura (abaixo do `---`) e habilidades: `src/content/sobre/sobre.md`.
 - Retrato: `src/content/sobre/retrato.jpg`.
-- CV em PDF: substitua `public/cv-beatriz.pdf`.
-- WhatsApp, e-mail, Instagram, edição da capa e chamadas: `src/data/site.json`.
-- Imagem de prévia de link (WhatsApp, redes): `src/assets/og-padrao.jpg` (1200×630). Peças, coleções e a página Sobre usam a própria foto.
+- CV em PDF: substitua `public/cv-beatriz.pdf`. A trajetória completa fica nele.
+- WhatsApp, e-mail e Instagram: `src/data/site.json`.
+- Imagem de prévia de link (WhatsApp, redes): o primeiro look do Sketchbook.
 
-## Página de croquis
-A página tem três partes, e o conteúdo de cada uma fica numa pasta própria:
+## Trocar placeholders por fotos reais
+Substitua o arquivo mantendo o mesmo nome (ex.: `retrato.jpg`). O comando `npm run placeholders` **nunca** sobrescreve arquivos existentes. Ele só recria o que estiver faltando.
+
+## Croquis
+A seção de croquis tem três partes, e o conteúdo de cada uma fica numa pasta própria:
 - **Desenhados no Sketchbook:** o provador.
-- **Desenhados à mão:** o desenho ao vivo e o varal.
+- **Desenhados à mão:** o desenho ao vivo e o mural.
 - **Estudos no Sketchbook:** as anotações guiadas.
 
 **Regra de ouro:** a imagem que você coloca se chama `original…` e **nunca é alterada**. As imagens que o site mostra são **geradas** a partir dela pelo `npm run croquis`. Esse comando alinha os croquis, gira as folhas quando pedido e grava a marca d'água "Beatriz Chiusi". Depois de mexer em qualquer imagem ou `index.md` dessas pastas, rode:
@@ -63,13 +57,13 @@ alt: Descrição do desenho para quem não enxerga.
   - Ficam de fora fundo, pele, cabelo, cores ínfimas e cores que só aparecem em traços.
   - Não gostou de uma cor? Edite `paleta:` à mão (hex **entre aspas**, ex.: `"#bf343a"`) e rode de novo. Sua paleta é mantida e só as máscaras são refeitas.
 
-### Desenho à mão (desenho ao vivo e varal)
+### Desenho à mão (desenho ao vivo e mural)
 Cada pasta em `src/content/desenhos/` é um grupo de folhas presas juntas, como o croqui com as fichas técnicas. As folhas são `original-1.jpg`, `original-2.jpg`… e o `index.md` fica assim:
 ```md
 ---
 titulo: "Look completo 4"   # só para você; não aparece no site
 ordem: 4
-tipo: colorido              # ou rascunho (lápis: vai para o fim do varal, sem efeito de grafite)
+tipo: colorido              # ou rascunho (lápis: vai para o canto de rascunhos do mural, sem efeito de grafite)
 aoVivo: true                # opcional: entra como "desenho ao vivo" na mesa de luz
 folhas:
   - imagem: ./folha-1.jpg
@@ -80,7 +74,7 @@ folhas:
 ---
 ```
 - **Desenho ao vivo:** a 1ª folha é desenhada na tela, e as outras entram ao lado como fichas técnicas.
-- **Varal:** sem `aoVivo`, o grupo vai para o varal.
+- **Mural:** sem `aoVivo`, o grupo vai para o mural, preso com alfinete ou fita.
 - **Manchas amarelas de papel antigo:** os originais de hoje já foram limpos. Se chegar um desenho novo manchado, peça a limpeza antes de colocar.
 
 ### Estudo do Sketchbook (leitura guiada)
@@ -91,12 +85,12 @@ ordem: 8
 imagem: ./prancha.jpg
 alt: "Estudo de …"
 anotacoes:
-  - x: 24        # posição do ponto, em % da largura da imagem
+  - x: 24        # para onde o zoom vai, em % da largura da imagem
     y: 11        # em % da altura
-    texto: "O que a anotação diz, escrito por extenso."
+    texto: "O que a anotação diz (não aparece no site)."
 ---
 ```
-Os pontos aparecem numerados na ordem da lista. Prefira posicioná-los **ao lado** da anotação escrita, não em cima dela. **Os textos das anotações de hoje foram transcritos dos desenhos e precisam ser conferidos pela Beatriz.**
+Na tela não aparece nenhuma anotação: o visitante só usa os botões "Começar"/"Próximo", e a prancha aproxima cada ponto na ordem da lista. Coloque o `x`/`y` no centro do detalhe que deve ficar em foco. O `texto` é obrigatório, mas só fica guardado (serve de referência e para leitores de tela no futuro).
 
 ### Se esquecer de rodar o script
 O build e os testes avisam qual pasta e qual arquivo faltam.

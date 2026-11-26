@@ -3,8 +3,8 @@ import { ouvir, reduzido, type Limpeza } from './comum';
 const ESCALA = 2.4;
 
 /**
- * Leitura guiada dos estudos: uma prancha por vez; "Começar"/"Próxima anotação" ou tocar num ponto
- * aproxima a prancha até a anotação (sem mostrar além das bordas) e mostra o texto ao lado.
+ * Leitura guiada dos estudos: uma prancha por vez; "Começar"/"Próximo" aproxima a prancha até cada
+ * anotação, em ordem (sem mostrar além das bordas). Os pontos ficam escondidos: só guardam a posição.
  * Com movimento reduzido, o CSS tira a transição (o zoom vira um corte direto).
  */
 export function iniciar(raiz: HTMLElement): Limpeza {
@@ -42,28 +42,16 @@ export function iniciar(raiz: HTMLElement): Limpeza {
 
   function pintar(estudo: HTMLElement) {
     const a = anotacao.get(estudo) ?? null;
-    const pontos = Array.from(estudo.querySelectorAll<HTMLElement>('[data-ponto]'));
-    const itens = Array.from(estudo.querySelectorAll('[data-lista] li'));
-    const n = pontos.length;
-    const contador = estudo.querySelector<HTMLElement>('[data-contador]')!;
-    const texto = estudo.querySelector<HTMLElement>('[data-texto]')!;
-    contador.hidden = false;
-    texto.hidden = false;
-    pontos.forEach((p, i) => p.setAttribute('aria-current', String(i === a)));
-    if (a == null) {
-      contador.textContent = `${n} ${n === 1 ? 'anotação' : 'anotações'} nesta prancha`;
-      texto.textContent = 'Toque num ponto para ler a anotação, ou siga em ordem.';
-    } else {
-      contador.textContent = `Anotação ${a + 1} de ${n}`;
-      texto.textContent = itens[a]?.textContent ?? '';
-    }
+    const n = estudo.querySelectorAll('[data-ponto]').length;
+    // Na tela não aparece texto nenhum; o contador é só para leitores de tela.
+    estudo.querySelector<HTMLElement>('[data-contador]')!.textContent = a == null ? 'Prancha inteira' : `Detalhe ${a + 1} de ${n}`;
     const anterior = estudo.querySelector<HTMLButtonElement>('[data-anterior]')!;
     const proxima = estudo.querySelector<HTMLButtonElement>('[data-proxima]')!;
     anterior.disabled = a == null;
-    proxima.textContent = a == null ? 'Começar' : a === n - 1 ? 'Próximo estudo' : 'Próxima anotação';
+    proxima.textContent = a == null ? 'Começar' : a === n - 1 ? 'Próximo estudo' : 'Próximo';
     estudo.querySelector<HTMLElement>('[data-inteira]')!.hidden = a == null;
     enquadrar(estudo);
-    // no celular o texto fica embaixo da prancha: traz a prancha de volta à vista se ela saiu da tela
+    // no celular os botões ficam embaixo da prancha: traz a prancha de volta à vista se ela saiu da tela
     if (a != null) {
       const q = estudo.querySelector<HTMLElement>('[data-quadro]')!.getBoundingClientRect();
       const topoUtil = (document.querySelector<HTMLElement>('.abas')?.getBoundingClientRect().bottom ?? 0);
@@ -86,13 +74,6 @@ export function iniciar(raiz: HTMLElement): Limpeza {
     estudo.querySelector<HTMLElement>('[data-so-js]')!.hidden = false;
     const n = estudo.querySelectorAll('[data-ponto]').length;
     limpezas.push(
-      ouvir(estudo.querySelector<HTMLElement>('[data-camada]')!, 'click', (e) => {
-        const p = (e.target as HTMLElement).closest<HTMLElement>('[data-ponto]');
-        if (!p) return;
-        const k = Number(p.dataset.ponto);
-        anotacao.set(estudo, anotacao.get(estudo) === k ? null : k);
-        pintar(estudo);
-      }),
       ouvir(estudo.querySelector<HTMLElement>('[data-proxima]')!, 'click', () => {
         const a = anotacao.get(estudo);
         if (a == null) anotacao.set(estudo, 0);

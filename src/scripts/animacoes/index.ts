@@ -20,7 +20,7 @@ async function iniciar() {
     raiz.dataset.animacoes = 'reduzidas';
     return;
   }
-  if (!document.querySelector('[data-anim], [data-letra]')) {
+  if (!document.querySelector('[data-anim]')) {
     raiz.dataset.animacoes = 'sem-alvos';
     return;
   }
@@ -29,11 +29,7 @@ async function iniciar() {
   const [{ gsap }, { ScrollTrigger }] = await Promise.all([import('gsap'), import('gsap/ScrollTrigger')]);
   gsap.registerPlugin(ScrollTrigger);
   const modulos: Modulo[] = await Promise.all([
-    import('./capa'),
     import('./revelar'),
-    import('./parallax'),
-    import('./processo'),
-    import('./linha'),
   ]);
   if (meuCiclo !== ciclo) return; // outra navegação começou enquanto carregava
 

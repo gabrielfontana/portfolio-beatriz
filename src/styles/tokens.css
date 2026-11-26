@@ -1,13 +1,15 @@
 :root {
+  /* Caderno de ateliê: papel, grafite e o vermelho dos próprios croquis. */
   --papel: #f6efe4;
-  --tinta: #141414;
-  --rosa: #ff2e88;
-  --vermelho: #e10600;
-  /* Vermelho para texto pequeno: o #e10600 tem só 4,35:1 sobre o papel (AA pede 4,5:1). */
-  --vermelho-texto: #c00000;
-  --cobalto: #0047ab;
-  --amarelo: #ffd400;
-  --fonte-display: 'Bodoni Moda Variable', 'Didot', 'Bodoni MT', serif;
+  --papel-escuro: #ede3d3;
+  --tinta: #2a2622;
+  /* Texto secundário (legendas, rótulos): 6,4:1 sobre o papel. */
+  --grafite: #5c554e;
+  /* Linhas finas de separação, como traço de lápis. */
+  --linha: #2a262233;
+  /* Acento tirado dos croquis; passa no AA para texto pequeno sobre o papel. */
+  --vermelho-texto: #a8323a;
+  --fonte-display: 'Fraunces Variable', Georgia, serif;
   --fonte-texto: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --gutter: clamp(16px, 4vw, 48px);
   --max: 1280px;

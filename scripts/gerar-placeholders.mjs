@@ -45,15 +45,6 @@ export function montarPdf(linhas) {
   return Buffer.from(pdf, 'latin1');
 }
 
-const PECAS = [
-  { slug: 'vestido-aurora', cor: '#ff8fc0', galeria: 3, processo: true },
-  { slug: 'blusa-alvorada', cor: '#ffb3d4', galeria: 2 },
-  { slug: 'saia-orvalho', cor: '#ff6fa8', galeria: 1 },
-  { slug: 'blazer-concreto', cor: '#7da2e0', galeria: 2 },
-  { slug: 'calca-viga', cor: '#9fb8e8', galeria: 1 },
-  { slug: 'macacao-ponte', cor: '#5f8bd6', galeria: 0 },
-];
-
 async function main() {
   const raiz = fileURLToPath(new URL('..', import.meta.url));
   let criados = 0;
@@ -64,19 +55,6 @@ async function main() {
     }
   };
 
-  for (const p of PECAS) {
-    const pasta = `src/content/pecas/${p.slug}`;
-    await criar(`${pasta}/capa.jpg`, { largura: 1200, altura: 1600, cor: p.cor, rotulo: `${p.slug} · capa` });
-    for (let i = 1; i <= p.galeria; i++) {
-      const nome = String(i).padStart(2, '0');
-      await criar(`${pasta}/${nome}.jpg`, { largura: 1200, altura: 1500, cor: p.cor, rotulo: `${p.slug} · ${nome}` });
-    }
-    if (p.processo) {
-      for (const etapa of ['croqui', 'molde', 'costura', 'final']) {
-        await criar(`${pasta}/${etapa}.jpg`, { largura: 1200, altura: 1500, cor: p.cor, rotulo: `${p.slug} · ${etapa}` });
-      }
-    }
-  }
   await criar('src/content/sobre/retrato.jpg', { largura: 1000, altura: 1250, cor: '#ffd400', rotulo: 'retrato da Beatriz' });
   await criar('src/assets/og-padrao.jpg', { largura: 1200, altura: 630, cor: '#ff2e88', rotulo: 'BEATRIZ · modelista' });
 

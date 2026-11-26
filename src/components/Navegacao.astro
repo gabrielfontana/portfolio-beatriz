@@ -1,12 +1,10 @@
 ---
+// O site é uma página só: o menu leva às seções dela.
 const links = [
-  { href: '/colecoes', texto: 'Coleções' },
-  { href: '/processo', texto: 'Processo' },
-  { href: '/croquis', texto: 'Croquis' },
-  { href: '/sobre', texto: 'Sobre' },
-  { href: '#expediente', texto: 'Contato' },
+  { href: '#sobre', texto: 'Sobre' },
+  { href: '#croquis', texto: 'Croquis' },
+  { href: '#contato', texto: 'Contato' },
 ];
-const atual = Astro.url.pathname;
 ---
 <header class="nav">
   <div class="container nav__barra">
@@ -15,7 +13,7 @@ const atual = Astro.url.pathname;
       <ul>
         {links.map((l) => (
           <li>
-            <a href={l.href} aria-current={atual.startsWith(l.href) ? 'page' : undefined}>{l.texto}</a>
+            <a href={l.href}>{l.texto}</a>
           </li>
         ))}
       </ul>
@@ -27,30 +25,29 @@ const atual = Astro.url.pathname;
   .nav {
     position: sticky; top: 0; z-index: 50;
     background: var(--papel);
-    border-bottom: 2px solid var(--tinta);
+    border-bottom: 1px solid var(--linha);
   }
   .nav__barra {
     display: flex; align-items: center; justify-content: space-between;
     gap: 0.75rem; flex-wrap: wrap; padding-block: 0.6rem;
   }
   .nav__logo {
-    font-family: var(--fonte-display); font-size: 1.6rem; font-weight: 900;
+    font-family: var(--fonte-display); font-size: 1.6rem; font-weight: 600;
     text-decoration: none; line-height: 1;
   }
   .nav__logo span { font-style: italic; font-weight: 400; }
   ul { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; list-style: none; margin: 0; padding: 0; }
-  a[aria-current='page'], ul a:hover { color: var(--vermelho-texto); }
+  ul a:hover { color: var(--vermelho-texto); }
   ul a {
-    font-size: 0.7rem; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase;
+    font-size: 0.9rem; font-weight: 500;
     text-decoration: none;
   }
-  a[aria-current='page'] { text-decoration: underline; text-underline-offset: 4px; }
   /* No celular o menu quebra em duas linhas e, preso, tomaria boa parte da tela: lá ele rola junto. */
   @media (max-width: 767px) {
     .nav { position: relative; }
   }
   @media (min-width: 768px) {
     ul { gap: 2rem; }
-    ul a { font-size: 0.78rem; }
+    ul a { font-size: 0.95rem; }
   }
 </style>

@@ -1,7 +1,6 @@
 import { test, expect } from '@playwright/test';
-import { coletarErros } from './utils';
 
-const ALVOS = '[data-letra], [data-chamada], [data-anim="revelar"]';
+const ALVOS = '[data-anim="revelar"]';
 
 test('com movimento reduzido, nada anima e tudo fica visível', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -22,32 +21,9 @@ test('animações rodam e terminam com todo o conteúdo visível', async ({ page
   for (const el of await page.locator(ALVOS).all()) await expect(el).toHaveCSS('opacity', '1');
 });
 
-test('navegar e voltar reinicia as animações sem acumular gatilhos nem erros', async ({ page }) => {
-  const erros = coletarErros(page);
-  await page.goto('/');
-  const html = page.locator('html');
-  await expect(html).toHaveAttribute('data-animacoes-ciclo', '1');
-  // data-gatilhos só existe depois que o GSAP carregou e iniciou ('ativas').
-  await expect(html).toHaveAttribute('data-animacoes', 'ativas');
-  const gatilhosIniciais = await html.getAttribute('data-gatilhos');
-  expect(gatilhosIniciais).not.toBeNull();
-
-  await page.getByRole('navigation', { name: 'Principal' }).getByRole('link', { name: 'Coleções' }).click();
-  await expect(page).toHaveURL(/\/colecoes$/);
-  await expect(html).toHaveAttribute('data-animacoes-ciclo', '2');
-  await expect(page.locator('.card-colecao').first()).toHaveCSS('opacity', '1');
-
-  await page.goBack();
-  await expect(page).toHaveURL(/127\.0\.0\.1:4321\/$/);
-  await expect(html).toHaveAttribute('data-animacoes-ciclo', '3');
-  await expect(html).toHaveAttribute('data-gatilhos', gatilhosIniciais!);
-  await expect(page.locator('[data-letra]').last()).toHaveCSS('opacity', '1');
-  expect(erros).toEqual([]);
-});
-
 test('título já visível ao abrir a página não some nem pisca (tela de notebook baixa)', async ({ page, isMobile }) => {
   if (!isMobile) await page.setViewportSize({ width: 1280, height: 720 });
-  await page.goto('/pecas/vestido-aurora');
+  await page.goto('/');
   await expect(page.locator('html')).toHaveAttribute('data-animacoes', 'ativas');
   const h1 = page.getByRole('heading', { level: 1 });
   expect(await h1.evaluate((el) => getComputedStyle(el).opacity)).toBe('1');

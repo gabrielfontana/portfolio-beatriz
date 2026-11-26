@@ -2,17 +2,8 @@ import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { coletarErros } from './utils';
 
-const ROTAS = [
-  '/',
-  '/colecoes',
-  '/colecoes/aurora',
-  '/colecoes/concreto',
-  '/pecas/vestido-aurora',
-  '/pecas/macacao-ponte',
-  '/processo',
-  '/sobre',
-  '/croquis',
-];
+// O site é uma página só.
+const ROTAS = ['/'];
 
 for (const rota of ROTAS) {
   test(`${rota}: sem rolagem horizontal`, async ({ page }) => {
@@ -61,13 +52,12 @@ test('todos os links internos respondem 200', async ({ page }) => {
   expect(visitadas.has('/cv-beatriz.pdf')).toBe(true);
 });
 
-test('cada página tem título próprio', async ({ page }) => {
-  const titulos = new Set<string>();
-  for (const rota of ROTAS) {
-    await page.goto(rota);
-    titulos.add(await page.title());
-  }
-  expect(titulos.size).toBe(ROTAS.length);
+test('links de âncora apontam para seções que existem', async ({ page }) => {
+  await page.goto('/');
+  const alvos = await page.locator('a[href^="#"]').evaluateAll((as) => as.map((a) => a.getAttribute('href')!.slice(1)));
+  const faltando = [];
+  for (const id of alvos) if ((await page.locator(`[id="${id}"]`).count()) === 0) faltando.push(id);
+  expect(faltando).toEqual([]);
 });
 
 test('fontes servidas pelo próprio site (sem CSS externo bloqueando a renderização)', async ({ page }) => {
@@ -75,6 +65,6 @@ test('fontes servidas pelo próprio site (sem CSS externo bloqueando a renderiza
   await expect(page.locator('link[rel="stylesheet"][href*="fonts.googleapis.com"]')).toHaveCount(0);
   await page.evaluate(() => document.fonts.ready);
   const familias = await page.evaluate(() => [...document.fonts].filter((f) => f.status === 'loaded').map((f) => f.family));
-  expect(familias.join(',')).toMatch(/Bodoni Moda/);
+  expect(familias.join(',')).toMatch(/Fraunces/);
   expect(familias.join(',')).toMatch(/Inter/);
 });

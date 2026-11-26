@@ -16,82 +16,114 @@ interface Props {
   grupos: Grupo[];
 }
 const { grupos } = Astro.props;
+const coloridos = grupos.filter((g) => g.tipo === 'colorido');
+const rascunhos = grupos.filter((g) => g.tipo === 'rascunho');
+// Cada folha fica um pouco torta, sempre do mesmo jeito (sem sorteio: o build sai igual toda vez).
+const GIROS = [-2.2, 1.6, -0.9, 2.4, -1.7, 0.8, -2.6, 1.2];
 ---
-<!-- Varal: os desenhos ficam pendurados num fio (role para o lado). Folhas do mesmo grupo vêm presas
-     por um clipe. O script faz o varal balançar com a rolagem e abre a folha tocada no visualizador. -->
-<div class="varal" data-varal>
-  <div class="varal__trilho" data-trilho tabindex="0" role="region" aria-label="Varal de desenhos à mão (role para o lado)">
-    <ul class="varal__fila">
-      {grupos.map((g) => {
-        const [primeira] = g.folhas;
-        const deitada = primeira.largura > primeira.altura;
-        return (
-          <li class="pendurado" data-pendurado data-deitada={deitada ? '' : undefined}>
-            <span class="pregador pregador--e" aria-hidden="true"></span>
-            <span class="pregador pregador--d" aria-hidden="true"></span>
-            <button
-              type="button"
-              class="grupo"
-              id={g.id}
-              data-grupo
-              data-tipo={g.tipo}
-              data-folhas={g.visor}
-              style={`aspect-ratio: ${primeira.largura} / ${primeira.altura}`}
-            >
-              {g.folhas.length > 1 && <span class="clipe" aria-hidden="true"></span>}
-              {g.folhas.map((f, i) =>
-                i === 0 ? (
-                  <span class="folha folha--topo">
-                    {g.tipo === 'colorido' && <img class="folha__traco" src={f.src} alt="" aria-hidden="true" loading="lazy" decoding="async" />}
-                    <img class="folha__cor" src={f.src} alt={f.alt} loading="lazy" decoding="async" />
-                  </span>
-                ) : (
-                  <span class="folha" style={`--k: ${i}`} aria-hidden="true">
-                    <img src={f.src} alt="" loading="lazy" decoding="async" />
-                  </span>
-                ),
-              )}
-              {g.folhas.length > 1 && <span class="sr-only">{`, ${g.folhas.length} folhas`}</span>}
-            </button>
-          </li>
-        );
-      })}
-    </ul>
-  </div>
+<!-- Mural de ateliê: os desenhos ficam presos num quadro de papel kraft, com alfinete ou fita crepe,
+     um pouco tortos. Folhas do mesmo grupo ficam empilhadas. Os rascunhos a lápis vão numa grade
+     própria, embaixo dos coloridos. Tocar numa folha abre o grupo no visualizador.
+     (Os títulos das pastas não aparecem: nenhum nome de pasta vai para o site.) -->
+<div class="mural" data-varal role="region" aria-label="Mural de desenhos à mão">
+  {[coloridos, rascunhos].map((lista, bloco) => lista.length > 0 && (
+    <Fragment>
+      <ul class:list={['mural__grade', bloco === 1 && 'mural__grade--rascunhos']}>
+        {lista.map((g, i) => {
+          const [primeira] = g.folhas;
+          const deitada = primeira.largura > primeira.altura;
+          const fixacao = (i + bloco) % 3 === 2 ? 'fita' : 'alfinete';
+          return (
+            <li class="preso" data-pendurado data-deitada={deitada ? '' : undefined} style={`--giro: ${GIROS[(i + bloco * 3) % GIROS.length]}deg`}>
+              {fixacao === 'alfinete'
+                ? <span class="alfinete" aria-hidden="true"></span>
+                : <span class="fita" aria-hidden="true"></span>}
+              <button
+                type="button"
+                class="grupo"
+                id={g.id}
+                data-grupo
+                data-tipo={g.tipo}
+                data-folhas={g.visor}
+                style={`aspect-ratio: ${primeira.largura} / ${primeira.altura}`}
+              >
+                {g.folhas.map((f, k) =>
+                  k === 0 ? (
+                    <span class="folha folha--topo">
+                      <img class="folha__cor" src={f.src} alt={f.alt} loading="lazy" decoding="async" />
+                    </span>
+                  ) : (
+                    <span class="folha" style={`--k: ${k}`} aria-hidden="true">
+                      <img src={f.src} alt="" loading="lazy" decoding="async" />
+                    </span>
+                  ),
+                )}
+                {g.folhas.length > 1 && <span class="sr-only">{`, ${g.folhas.length} folhas`}</span>}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </Fragment>
+  ))}
 </div>
 
 <style>
-  .varal { margin-inline: calc(-1 * var(--gutter)); }
-  .varal__trilho { overflow-x: auto; overflow-y: hidden; padding: 2.75rem var(--gutter) 3.5rem; scrollbar-width: thin; cursor: grab; }
-  .varal__trilho:focus-visible { outline: 2px solid var(--tinta); outline-offset: -4px; }
-  .varal__trilho.arrastando { cursor: grabbing; }
-  .varal__fila { position: relative; display: flex; align-items: flex-start; gap: 2.6rem; width: max-content; list-style: none; margin: 0; padding: 0 1.5rem; }
-  /* o fio */
-  .varal__fila::before { content: ''; position: absolute; left: 0; right: 0; top: -1rem; height: 2px; background: #7a6a55; }
-  .pendurado { position: relative; width: clamp(170px, 20vw, 240px); transform-origin: 50% -1rem; rotate: var(--balanco, 0deg); }
-  .pendurado[data-deitada] { width: clamp(240px, 28vw, 340px); }
-  .pregador { position: absolute; z-index: 6; top: -1.6rem; width: 10px; height: 34px; background: #c9a36b; border-radius: 3px; box-shadow: inset -2px 0 #0002; }
-  .pregador--e { left: 18%; }
-  .pregador--d { right: 18%; }
+  /* O quadro: papel kraft com pintinhas, borda de madeira clara. */
+  .mural {
+    padding: clamp(1.5rem, 4vw, 3rem) clamp(1rem, 3.5vw, 3rem) clamp(1rem, 3vw, 2.5rem);
+    border-radius: 6px;
+    /* folhas tortas na última coluna não podem passar da borda do quadro */
+    overflow-x: clip;
+    background:
+      radial-gradient(#5a40201a 1px, transparent 1.4px) 0 0 / 7px 7px,
+      radial-gradient(#ffffff26 1px, transparent 1.6px) 3px 4px / 11px 11px,
+      #cdb28a;
+    box-shadow: inset 0 0 0 10px #b89468, inset 0 0 0 11px #0000001f, inset 0 3px 18px #0000002e;
+  }
+  /* Colunas no estilo "masonry": cada folha cai na coluna mais curta, com a altura dela. */
+  .mural__grade { list-style: none; margin: 0; padding: 0; columns: 5 160px; column-gap: clamp(1.25rem, 2.6vw, 2.5rem); }
+  .mural__grade--rascunhos { columns: 7 120px; column-gap: clamp(1rem, 2vw, 1.75rem); }
+
+  .preso {
+    position: relative; break-inside: avoid; margin: 0 0 clamp(1.75rem, 3vw, 2.5rem);
+    padding-top: 0.9rem; rotate: var(--giro);
+    transition: rotate 0.25s ease, translate 0.25s ease;
+  }
+  .preso:has(.grupo:hover), .preso:has(.grupo:focus-visible) { rotate: 0deg; translate: 0 -4px; z-index: 2; }
+
+  /* Fixações */
+  /* Nada pode passar do topo do item: nas colunas, o que sobra para cima aparece no pé da coluna anterior. */
+  .alfinete {
+    position: absolute; z-index: 6; top: 0.4rem; left: 50%; translate: -50% 0;
+    width: 15px; height: 15px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #e8857f, var(--vermelho-texto) 55%, #6e1f24);
+    box-shadow: 1px 3px 3px #0005;
+  }
+  .fita {
+    position: absolute; z-index: 6; top: 0.3rem; left: 50%; translate: -50% 0; rotate: -4deg;
+    width: 4.2rem; height: 1.35rem; background: #efe2bfd9; box-shadow: 0 1px 2px #0002;
+    clip-path: polygon(2% 0, 98% 4%, 100% 100%, 0 96%);
+  }
 
   .grupo { position: relative; display: block; width: 100%; padding: 0; border: 0; background: none; cursor: zoom-in; }
-  .grupo:focus-visible { outline: 3px solid var(--vermelho-texto); outline-offset: 4px; }
-  .folha { position: absolute; inset: 0; background: #fff; overflow: hidden; box-shadow: 0 1px 3px #0003, 0 6px 16px #0001; }
+  .grupo:focus-visible { outline: 3px solid var(--tinta); outline-offset: 4px; }
+  .folha { position: absolute; inset: 0; background: #fff; overflow: hidden; box-shadow: 0 1px 2px #0003, 0 8px 18px #0002; }
   .folha img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
   .folha--topo { z-index: 1; }
   /* folhas de trás aparecem um pouco, tortas */
-  .folha:not(.folha--topo) { z-index: 0; translate: calc(var(--k) * 8px) calc(var(--k) * 6px); rotate: calc(var(--k) * 2.2deg); }
-  .clipe { position: absolute; z-index: 5; top: -14px; left: 22%; width: 16px; height: 46px; border: 3px solid #8a8f96; border-radius: 9px; }
-  .clipe::after { content: ''; position: absolute; inset: 6px 2px 10px; border: 2px solid #8a8f96; border-radius: 6px; }
+  .folha:not(.folha--topo) { z-index: 0; translate: calc(var(--k) * 7px) calc(var(--k) * 5px); rotate: calc(var(--k) * 2.2deg); }
 
-  /* Traço → cor: nas folhas coloridas, o grafite fica por baixo e a cor desce quando a folha aparece
-     (o script põe data-revelada="nao" e depois "sim"; sem script, a cor já está lá). */
-  .folha__traco { filter: grayscale(1) contrast(1.6) brightness(1.08); }
-  .grupo[data-revelada='nao'] .folha__cor { clip-path: inset(0 0 100% 0); }
-  .grupo[data-revelada='sim'] .folha__cor { clip-path: inset(0); transition: clip-path 1.4s cubic-bezier(0.6, 0, 0.2, 1); }
 
+
+  @media (max-width: 767px) {
+    .mural__grade { columns: 2; column-gap: 1.1rem; }
+    .mural__grade--rascunhos { columns: 3; column-gap: 0.8rem; }
+    .folha:not(.folha--topo) { translate: calc(var(--k) * 4px) calc(var(--k) * 4px); rotate: calc(var(--k) * 1.5deg); }
+    .alfinete { width: 12px; height: 12px; }
+    .fita { width: 3.2rem; height: 1.1rem; }
+  }
   @media (prefers-reduced-motion: reduce) {
-    .pendurado { rotate: 0deg; }
-    .grupo .folha__cor { clip-path: none !important; transition: none !important; }
+    .preso { transition: none; }
   }
 </style>

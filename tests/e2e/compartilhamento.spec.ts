@@ -3,7 +3,7 @@ import sharp from 'sharp';
 
 // WhatsApp só mostra miniatura de imagens leves (~300KB) e prefere o formato 1,91:1.
 // Fotos menores que 1200px não são ampliadas, então vale a proporção, não o tamanho exato.
-for (const rota of ['/', '/pecas/vestido-aurora', '/sobre', '/croquis']) {
+for (const rota of ['/']) {
   test(`${rota}: imagem de prévia 1,91:1, leve e com dimensões declaradas corretas`, async ({ page }) => {
     await page.goto(rota);
     const largura = Number(await page.locator('meta[property="og:image:width"]').getAttribute('content'));

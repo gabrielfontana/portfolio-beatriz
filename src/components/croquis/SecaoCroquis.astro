@@ -2,14 +2,13 @@
 import type { ImageMetadata } from 'astro';
 import { getCollection } from 'astro:content';
 import { getImage } from 'astro:assets';
-import Revista from '../layouts/Revista.astro';
-import Provador from '../components/croquis/Provador.astro';
-import DesenhoAoVivo from '../components/croquis/DesenhoAoVivo.astro';
-import Varal from '../components/croquis/Varal.astro';
-import Visualizador from '../components/croquis/Visualizador.astro';
-import Estudos from '../components/croquis/Estudos.astro';
-import logoSketchbook from '../assets/croquis/logo-sketchbook.png';
-import { faixaDaColecao, resolverMascaras } from '../lib/croquis';
+import Provador from './Provador.astro';
+import DesenhoAoVivo from './DesenhoAoVivo.astro';
+import Varal from './Varal.astro';
+import Visualizador from './Visualizador.astro';
+import Estudos from './Estudos.astro';
+import logoSketchbook from '../../assets/croquis/logo-sketchbook.png';
+import { faixaDaColecao, resolverMascaras } from '../../lib/croquis';
 
 // ---------- Sketchbook: um manequim por pose ----------
 const mapaMascaras = import.meta.glob<ImageMetadata>('/src/content/croquis/*/mascara-*.png', { eager: true, import: 'default' });
@@ -53,7 +52,7 @@ const aoVivo = await Promise.all(
       visor: await dadosDoVisor(d.data.folhas, d.data.tipo === 'colorido'),
     })),
 );
-// No varal, os rascunhos a lápis vão por último.
+// No mural, os rascunhos a lápis vão por último (num canto próprio).
 const doVaral = [...desenhos.filter((d) => !d.data.aoVivo && d.data.tipo === 'colorido'), ...desenhos.filter((d) => !d.data.aoVivo && d.data.tipo === 'rascunho')];
 const varal = await Promise.all(
   doVaral.map(async (d) => ({
@@ -83,15 +82,11 @@ const estudos = await Promise.all(
 
 const logo = await getImage({ src: logoSketchbook, width: 96, format: 'png' });
 ---
-<Revista
-  titulo="Croquis"
-  descricao="Croquis de Beatriz: looks desenhados no app Sketchbook, desenhos à mão em marcador e lápis, e estudos com as anotações de modelagem."
-  imagemOg={looks[0]?.data.imagem}
->
-  <div data-pagina-croquis>
+<!-- As abas ficam presas só enquanto a seção de croquis está na tela (sticky dentro deste bloco). -->
+<section class="croquis" id="croquis" aria-labelledby="t-croquis" data-pagina-croquis>
     <header class="container croquis-topo">
       <p class="kicker">Do app ao papel</p>
-      <h1 data-anim="revelar">Croquis</h1>
+      <h2 id="t-croquis" data-anim="revelar">Croquis</h2>
       <p class="croquis-topo__linha">
         Looks desenhados no Sketchbook e no papel, e os estudos por trás deles.
       </p>
@@ -114,21 +109,21 @@ const logo = await getImage({ src: logoSketchbook, width: 96, format: 'png' });
       <div class="capitulo__titulo">
         <img src={logo.src} alt="" width="48" height="48" />
         <div>
-          <h2 id="t-sketchbook">Desenhados no Sketchbook</h2>
+          <h3 id="t-sketchbook">Desenhados no Sketchbook</h3>
           <p>Toque na figura para trocar a roupa. Toque numa cor para ver onde ela está.</p>
         </div>
       </div>
       <Provador manequins={manequins} />
     </section>
 
-    <!-- Seção de largura total: a mesa de luz vai de ponta a ponta; título e varal no container. -->
+    <!-- Seção de largura total: a mesa de luz vai de ponta a ponta; título e mural no container. -->
     <section class="capitulo capitulo--largo" id="a-mao" aria-labelledby="t-a-mao">
       <div class="container capitulo__titulo">
         <span class="capitulo__icone" aria-hidden="true">
           <svg viewBox="0 0 24 24"><path d="M4 20l1-5L16 4l4 4L9 19z" /><path d="M14 6l4 4" /></svg>
         </span>
         <div>
-          <h2 id="t-a-mao">Desenhados à mão</h2>
+          <h3 id="t-a-mao">Desenhados à mão</h3>
           <p>Marcador, lápis de cor e grafite no papel. Toque numa folha para ver de perto.</p>
         </div>
       </div>
@@ -140,23 +135,25 @@ const logo = await getImage({ src: logoSketchbook, width: 96, format: 'png' });
       <div class="capitulo__titulo">
         <img src={logo.src} alt="" width="48" height="48" />
         <div>
-          <h2 id="t-estudos">Estudos no Sketchbook</h2>
-          <p>Medidas, referências e dúvidas anotadas durante a criação. Siga as anotações uma a uma.</p>
+          <h3 id="t-estudos">Estudos no Sketchbook</h3>
+          <p>Medidas, referências e dúvidas anotadas durante a criação. Use "Próximo" para ver cada detalhe de perto.</p>
         </div>
       </div>
       <Estudos estudos={estudos} />
     </section>
 
     <Visualizador />
-  </div>
-</Revista>
+</section>
 
 <script>
-  import '../scripts/croquis/index.ts';
+  import '../../scripts/croquis/index.ts';
 </script>
 
 <style>
-  .croquis-topo { padding-block: 3rem 1.5rem; }
+  .croquis { scroll-margin-top: var(--altura-menu, 3.3rem); }
+  .croquis-topo { padding-block: 3rem 1.5rem; border-top: 1px solid var(--linha); }
+  /* "Croquis" abre a seção do tamanho do h1 (é h2 porque o h1 da página é o nome da Beatriz). */
+  .croquis-topo h2 { font-size: clamp(2.4rem, 6vw, 4.5rem); }
   .croquis-topo__linha { max-width: 48ch; font-size: 1.15rem; margin-top: 1rem; }
   .faixa { display: flex; height: 18px; margin-bottom: 0; }
   .faixa span { flex: 1; background: var(--cor); }
@@ -188,16 +185,16 @@ const logo = await getImage({ src: logoSketchbook, width: 96, format: 'png' });
 
   /* Cada seção para logo abaixo do menu + abas ao chegar pela aba. */
   .capitulo { padding-block: 3rem 4.5rem; scroll-margin-top: calc(var(--altura-menu, 3.3rem) + 3.2rem); }
-  .capitulo + .capitulo { border-top: 2px solid var(--tinta); }
+  .capitulo + .capitulo { border-top: 1px solid var(--linha); }
   /* a borda de cima acompanha a largura do container, como nas outras seções */
-  .capitulo--largo { border-top: 0 !important; background: linear-gradient(var(--tinta), var(--tinta)) top / min(100% - 2 * var(--gutter), var(--max)) 2px no-repeat; }
+  .capitulo--largo { border-top: 0 !important; background: linear-gradient(var(--linha), var(--linha)) top / min(100% - 2 * var(--gutter), var(--max)) 1px no-repeat; }
   .capitulo__titulo { display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem; }
   .capitulo__titulo img { width: 48px; height: 48px; border-radius: 11px; flex: none; }
-  .capitulo__titulo h2 { margin: 0; }
+  .capitulo__titulo h3 { margin: 0; font-size: clamp(1.6rem, 3.2vw, 2.3rem); }
   .capitulo__titulo p { margin: 0.35rem 0 0; max-width: 60ch; }
-  .capitulo__icone { display: grid; place-items: center; width: 48px; height: 48px; flex: none; border: 2px solid var(--tinta); border-radius: 11px; }
+  .capitulo__icone { display: grid; place-items: center; width: 48px; height: 48px; flex: none; border: 1px solid var(--linha); border-radius: 11px; }
   .capitulo__icone svg { width: 26px; height: 26px; }
-  /* O desenho ao vivo vai de ponta a ponta; o varal vem depois dele. */
+  /* O desenho ao vivo vai de ponta a ponta; o mural vem depois dele. */
   #a-mao :global(.ao-vivo:first-of-type) { margin-top: 0.5rem; }
-  #a-mao :global(.varal) { margin-top: 3rem; }
+  #a-mao :global(.mural) { margin-top: 3rem; }
 </style>

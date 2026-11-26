@@ -1,18 +1,46 @@
 import { ouvir, reduzido, type FolhaVisor, type Limpeza } from './comum';
 
-const CURVA = 'cubic-bezier(.2,.8,.2,1)';
-const ESPIANDO = 'translateX(17%) rotate(3.5deg) scale(.94)';
-const SAINDO = 'translateX(-70%) rotate(-7deg)';
+/** Troca de folha como num baralho: devagar (~1 s), cada carta com curva macia. */
+const TROCA_MS = 1000;
+/** Voo de abrir e de fechar: o mesmo ritmo e as mesmas curvas do folhear. */
+const VOO_MS = TROCA_MS;
+/** Até onde a carta é puxada para a esquerda antes de mudar de camada (fora do monte, inclinada). */
+const FORA = 'translateX(-72%) translateY(-2%) rotate(-9deg)';
+/** Carta guardada embaixo do monte: no centro, um pouco menor (coberta pela de cima). */
+const NO_MONTE = 'scale(.94)';
+const PUXAR = 'cubic-bezier(.35,0,.25,1)';
+const GUARDAR = 'cubic-bezier(.45,0,.2,1)';
+const TRAZER = 'cubic-bezier(.4,0,.2,1)';
+/** Espera a imagem estar pronta para pintar, sem travar se ela demorar. */
+const ESPERA_MAX = 700;
+
+const carregadas = new Map<string, Promise<void>>();
+function carregar(src: string): Promise<void> {
+  let p = carregadas.get(src);
+  if (!p) {
+    const img = new Image();
+    img.src = src;
+    p = img.decode().catch(() => {});
+    carregadas.set(src, p);
+  }
+  return p;
+}
 const ZOOM = 2.6;
 
-let abrirAtual: ((folhas: FolhaVisor[], indice: number, origem?: HTMLElement) => void) | null = null;
+/**
+ * Chamado ao fechar com a folha que estava na tela. Quem abriu pode pôr essa folha no lugar da origem
+ * (o mural põe a folha no topo da pilha) e devolve true; aí o voo de volta pousa nela.
+ */
+export type AoFechar = (indice: number) => boolean;
+
+let abrirAtual: ((folhas: FolhaVisor[], indice: number, origem?: HTMLElement, aoFechar?: AoFechar) => void) | null = null;
 
 /** Abre o visualizador com as folhas de um grupo, a partir do elemento tocado (para o voo). */
-export function abrirVisualizador(folhas: FolhaVisor[], indice: number, origem?: HTMLElement) {
-  abrirAtual?.(folhas, indice, origem);
+export function abrirVisualizador(folhas: FolhaVisor[], indice: number, origem?: HTMLElement, aoFechar?: AoFechar) {
+  abrirAtual?.(folhas, indice, origem, aoFechar);
 }
 
-/** Inclinação acumulada da origem (balanço do varal + rotação da folha), em graus. */
+/** Inclinação acumulada da origem (giro da folha no mural + rotação da folha), em graus. */
 function anguloDe(el: HTMLElement): number {
   let soma = 0;
   for (let e: HTMLElement | null = el; e && e !== document.body; e = e.parentElement) {
@@ -96,9 +124,28 @@ export function iniciar(raiz: HTMLElement): Limpeza {
     return `translate(${dx}px, ${dy}px) rotate(${anguloDe(el)}deg) scale(${de.width / para.width}, ${de.height / para.height})`;
   }
 
-  function abrir(lista: FolhaVisor[], indice: number, el?: HTMLElement) {
+  let fechando = false;
+  /** Número da troca de folha mais recente (uma troca antiga que termina de esperar é ignorada). */
+  let troca = 0;
+  /** Número da abertura mais recente (dois toques rápidos: só a última abre). */
+  let abertura = 0;
+  /** Folha que estava no mural (a origem do voo); o voo de volta só faz sentido com ela na tela. */
+  let indiceDaOrigem = 0;
+  let avisarAoFechar: AoFechar | undefined;
+
+  async function abrir(lista: FolhaVisor[], indice: number, el?: HTMLElement, aoFechar?: AoFechar) {
+    if (visor.open || fechando) return;
+    const minha = ++abertura;
+    // já baixa e decodifica as folhas do grupo: trocar de folha não pisca em branco
+    lista.forEach((f) => void carregar(f.src));
+    // Só abre quando a folha tocada já pode ser pintada: trocar o src de uma <img> deixa a imagem
+    // ANTERIOR na tela até a nova chegar (era a folha antiga aparecendo por um instante).
+    await Promise.race([carregar(lista[indice].src), new Promise((r) => setTimeout(r, ESPERA_MAX))]);
+    if (minha !== abertura || visor.open) return;
     folhas = lista;
     atual = indice;
+    indiceDaOrigem = indice;
+    avisarAoFechar = aoFechar;
     origem = el ?? null;
     mostrar();
     visor.showModal();
@@ -109,68 +156,141 @@ export function iniciar(raiz: HTMLElement): Limpeza {
         { transform: 'translateY(-2%) rotate(-1.2deg) scale(1.025)', offset: 0.7 },
         { transform: 'none' },
       ],
-      { duration: 680, easing: CURVA },
+      { duration: VOO_MS, easing: TRAZER },
     );
     origem.style.visibility = 'hidden'; // a folha "saiu" de onde estava
-    fundo.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 420, easing: 'ease-out' });
-    controles.forEach((c) => c.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300, delay: 380, fill: 'backwards' }));
+    fundo.animate([{ opacity: 0 }, { opacity: 1 }], { duration: VOO_MS * 0.6, easing: 'ease-out' });
+    controles.forEach((c) => c.animate([{ opacity: 0 }, { opacity: 1 }], { duration: VOO_MS * 0.4, delay: VOO_MS * 0.6, fill: 'backwards' }));
   }
-  abrirAtual = abrir;
+  abrirAtual = (lista, indice, el, aoFechar) => void abrir(lista, indice, el, aoFechar);
 
-  let fechando = false;
   async function fechar() {
     if (fechando || !visor.open) return;
     fechando = true;
+    troca++; // cancela uma troca de folha que ainda esperava a imagem
+    mesa.querySelectorAll('[data-folha-velha]').forEach((e) => e.remove());
     lupa.classList.remove('ativa');
+    // A folha da tela tem de ser a que está na origem: se a pessoa folheou, quem abriu (o mural) põe
+    // essa folha no topo da pilha antes do voo, e ela pousa no lugar certo, sem trocar de imagem.
+    const mesmaFolha = atual === indiceDaOrigem || (avisarAoFechar?.(atual) ?? false);
     if (!reduzido() && origem && origem.isConnected) {
-      controles.forEach((c) => c.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 150, fill: 'forwards' }));
-      fundo.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 420, delay: 80, fill: 'forwards' });
-      await folha
-        .animate([{ transform: 'none' }, { transform: sobreAOrigem(origem), boxShadow: '0 2px 6px #0003' }], {
-          duration: 520,
-          easing: 'cubic-bezier(.5,0,.3,1)',
-          fill: 'forwards',
-        })
-        .finished.catch(() => {});
+      controles.forEach((c) => c.animate([{ opacity: 1 }, { opacity: 0 }], { duration: VOO_MS * 0.3, fill: 'forwards' }));
+      fundo.animate([{ opacity: 1 }, { opacity: 0 }], { duration: VOO_MS * 0.7, delay: VOO_MS * 0.25, fill: 'forwards' });
+      // Sem como pôr a folha na origem (fichas do desenho ao vivo), ela esmaece em vez de voar.
+      const volta = mesmaFolha
+        ? [{ transform: 'none' }, { transform: sobreAOrigem(origem), boxShadow: '0 2px 6px #0003' }]
+        : [{ transform: 'none', opacity: 1 }, { transform: 'scale(.96)', opacity: 0 }];
+      await folha.animate(volta, { duration: VOO_MS, easing: GUARDAR, fill: 'forwards' }).finished.catch(() => {});
     }
     if (origem) origem.style.visibility = '';
     visor.close();
     [folha, fundo, ...controles].forEach((e) => e.getAnimations().forEach((a) => a.cancel()));
+    // esvazia o visualizador: a próxima abertura nunca mostra a folha deste grupo
+    [traco, cor, proxima.querySelector('img')!].forEach((img) => img.removeAttribute('src'));
+    miniaturas.replaceChildren();
     fechando = false;
   }
 
-  function irPara(destino: number, sentido?: 1 | -1) {
+  async function irPara(destino: number, sentido?: 1 | -1) {
     const n = folhas.length;
     const j = (destino + n) % n;
     if (j === atual || n < 2) return;
     const dir = sentido ?? (j > atual ? 1 : -1);
     lupa.classList.remove('ativa');
-    if (!reduzido()) {
-      // a folha atual sai (para a esquerda, ou para trás ao voltar) e a outra entra
-      // cópia só visual da folha atual (os elementos de verdade já foram guardados no início)
-      const velha = folha.cloneNode(true) as HTMLElement;
-      velha.setAttribute('aria-hidden', 'true');
-      delete velha.dataset.folha;
-      velha.querySelectorAll<HTMLElement>('[data-traco], [data-cor]').forEach((e) => {
-        delete e.dataset.traco;
-        delete e.dataset.cor;
-      });
-      velha.style.zIndex = dir > 0 ? '3' : '1';
-      mesa.append(velha);
-      velha
-        .animate([{ transform: 'none', opacity: 1 }, { transform: dir > 0 ? SAINDO : ESPIANDO, opacity: 0 }], {
-          duration: 380,
-          easing: 'cubic-bezier(.4,0,.6,1)',
-          fill: 'forwards',
-        })
-        .finished.then(() => velha.remove(), () => velha.remove());
-      folha.animate(
-        [{ transform: dir > 0 ? ESPIANDO : SAINDO, opacity: dir > 0 ? 1 : 0 }, { transform: 'none', opacity: 1 }],
-        { duration: 460, easing: CURVA },
-      );
+    // só troca quando a imagem nova já pode ser pintada (senão a folha pisca em branco)
+    const minha = ++troca;
+    await Promise.race([carregar(folhas[j].src), new Promise((r) => setTimeout(r, ESPERA_MAX))]);
+    if (minha !== troca || !visor.open) return;
+    if (reduzido()) {
+      atual = j;
+      mostrar();
+      return;
     }
+    // Baralho: as folhas são cartas de um monte, com a próxima espiando torta atrás.
+    // Avançando: a carta de cima é puxada para a esquerda e desliza para baixo do monte; a que espiava
+    // vem para a frente endireitando aos poucos, a partir da MESMA pose torta (nada de ficar reta do
+    // nada); a seguinte já está espiando no lugar dela (a "próxima" troca de imagem escondida por baixo).
+    // Voltando: a carta de baixo do monte sai pela esquerda e pousa por cima; a atual vai para a pose de
+    // espiar, exatamente onde a "próxima" mostra a mesma folha.
+    // A carta que sai é uma cópia só visual (com o tamanho de agora: não estica se a proporção mudar).
+    // Tudo opaco o tempo todo.
+    mesa.querySelectorAll('[data-folha-velha]').forEach((e) => e.remove());
+    const poseAntes = poseDaProxima(); // de onde a carta que espiava sai (inclusive com o mouse em cima)
+    const antes = folha.getBoundingClientRect();
+    const velha = folha.cloneNode(true) as HTMLElement;
+    velha.setAttribute('aria-hidden', 'true');
+    velha.dataset.folhaVelha = '';
+    delete velha.dataset.folha;
+    velha.querySelectorAll<HTMLElement>('[data-traco], [data-cor]').forEach((e) => {
+      delete e.dataset.traco;
+      delete e.dataset.cor;
+    });
     atual = j;
     mostrar();
+    const mesaAgora = mesa.getBoundingClientRect();
+    Object.assign(velha.style, {
+      inset: 'auto',
+      left: `${antes.left - mesaAgora.left}px`,
+      top: `${antes.top - mesaAgora.top}px`,
+      width: `${antes.width}px`,
+      height: `${antes.height}px`,
+    });
+    mesa.append(velha);
+    const tempo = { duration: TROCA_MS, fill: 'forwards' as const };
+    if (dir > 0) {
+      // a de cima (por cima de tudo) sai pela esquerda, e no meio do caminho passa para baixo do monte
+      void velha
+        .animate(
+          [
+            { transform: 'none', zIndex: 4, easing: PUXAR },
+            { transform: FORA, zIndex: 4, offset: 0.45 },
+            { transform: FORA, zIndex: 0, offset: 0.45, easing: GUARDAR },
+            { transform: NO_MONTE, zIndex: 0 },
+          ],
+          tempo,
+        )
+        .finished.catch(() => {})
+        .then(() => velha.remove());
+      // a que espiava começa exatamente torta como estava e vem para a frente devagar
+      folha.animate(
+        [
+          { transform: poseAntes, offset: 0 },
+          { transform: poseAntes, offset: 0.12, easing: TRAZER },
+          { transform: 'none', offset: 1 },
+        ],
+        { duration: TROCA_MS },
+      );
+    } else {
+      // a carta de baixo do monte sai pela esquerda e, no meio do caminho, passa para cima de tudo
+      folha.animate(
+        [
+          { transform: NO_MONTE, zIndex: 0, easing: PUXAR },
+          { transform: FORA, zIndex: 0, offset: 0.45 },
+          { transform: FORA, zIndex: 4, offset: 0.45, easing: GUARDAR },
+          { transform: 'none', zIndex: 4 },
+        ],
+        { duration: TROCA_MS },
+      );
+      // a atual vai para a pose de espiar (onde a "próxima" agora mostra esta mesma folha)
+      const poseDepois = poseDaProxima();
+      void velha
+        .animate(
+          [
+            { transform: 'none', zIndex: 2, offset: 0 },
+            { transform: 'none', zIndex: 2, offset: 0.2, easing: TRAZER },
+            { transform: poseDepois, zIndex: 2, offset: 1 },
+          ],
+          tempo,
+        )
+        .finished.catch(() => {})
+        .then(() => velha.remove());
+    }
+  }
+
+  /** Transformação atual da carta que espia atrás (a mesma caixa da folha), para as cartas partirem/chegarem nela. */
+  function poseDaProxima(): string {
+    const t = getComputedStyle(proxima).transform;
+    return t && t !== 'none' ? t : 'translateX(17%) rotate(3.5deg) scale(.94)';
   }
 
   // Lupa: com mouse, segue o ponteiro; no toque, liga ao segurar o dedo parado (arrastar troca de folha).
@@ -195,11 +315,11 @@ export function iniciar(raiz: HTMLElement): Limpeza {
   let toque: { x: number; y: number; lupa: boolean; arrastou: boolean; timer: number; ultimo: PointerEvent } | null = null;
 
   const limpezas: Limpeza[] = [
-    ouvir(proxima, 'click', () => irPara(atual + 1, 1)),
+    ouvir(proxima, 'click', () => void irPara(atual + 1, 1)),
     ouvir(miniaturas, 'click', (e) => {
       const b = (e.target as HTMLElement).closest('button');
       const j = b ? Array.from(miniaturas.children).indexOf(b) : -1;
-      if (j >= 0) irPara(j);
+      if (j >= 0) void irPara(j);
     }),
     ouvir(visor.querySelector<HTMLElement>('[data-fechar]')!, 'click', () => void fechar()),
     ouvir(visor, 'cancel', (e) => {
@@ -214,8 +334,8 @@ export function iniciar(raiz: HTMLElement): Limpeza {
     ouvir(document, 'keydown', (e) => {
       const ev = e as KeyboardEvent;
       if (!visor.open || (ev.target as HTMLElement).matches?.('input')) return;
-      if (ev.key === 'ArrowRight') irPara(atual + 1, 1);
-      if (ev.key === 'ArrowLeft') irPara(atual - 1, -1);
+      if (ev.key === 'ArrowRight') void irPara(atual + 1, 1);
+      if (ev.key === 'ArrowLeft') void irPara(atual - 1, -1);
     }),
     ouvir(palco, 'pointerdown', (e) => {
       const ev = e as PointerEvent;
@@ -246,7 +366,7 @@ export function iniciar(raiz: HTMLElement): Limpeza {
       clearTimeout(toque.timer);
       const dx = ev.clientX - toque.x;
       const dy = ev.clientY - toque.y;
-      if (!toque.lupa && Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) irPara(atual + (dx < 0 ? 1 : -1), dx < 0 ? 1 : -1);
+      if (!toque.lupa && Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) void irPara(atual + (dx < 0 ? 1 : -1), dx < 0 ? 1 : -1);
       toque = null;
       lupa.classList.remove('ativa');
     }),
