@@ -14,6 +14,14 @@ npm run placeholders   # recria imagens provisórias que faltam (nunca sobrescre
 ```
 Antes de dar algo por pronto, rode: `npx astro check`, `npm test` e `npx playwright test`. O Playwright roda dois projetos, `desktop` e `mobile` (Pixel 7), e os testes que valem para um só usam `test.skip(isMobile, ...)`.
 
+## Publicação (Cloudflare)
+- **Domínio:** `beatrizchiusi.com.br` (e `www`), registrado no Registro.br em nome da Beatriz, com DNS na Cloudflare. Documentação do domínio fora do repo: `Downloads/beatrizchiusi-setup.md`.
+- **Hospedagem:** um Worker só com arquivos estáticos (`wrangler.jsonc`: `name` = `patient-dawn-1154`, `assets.directory` = `./dist`). O nome precisa ser o do Worker que tem o domínio ligado no painel.
+- **Deploy automático:** o repositório está conectado ao Worker (Workers Builds). Todo push na `main` roda `npm run build` e `npx wrangler deploy`. Um build quebrado (tipos ou schema) não publica.
+- **Endereço oficial:** `site` em `astro.config.mjs` = `https://beatrizchiusi.com.br`. Ele vai no canônico e nas prévias de link; se o oficial passar a ser o `www`, troque ali também.
+- **Node do build:** `.node-version` (24).
+- **404:** `not_found_handling: "none"`. Rotas antigas (`/sobre`, `/croquis`…) respondem 404, sem cair na página inicial.
+
 ## Stack e convenções
 - **Versões:** Astro 5 (fixado em 5.18.x), GSAP 3 + ScrollTrigger, sharp. Fontes self-hosted via `@fontsource-variable` (Fraunces e Inter).
 - **Idioma do código:** nomes de variáveis, funções, arquivos, testes e commits em **português**. Siga o estilo do arquivo ao redor.

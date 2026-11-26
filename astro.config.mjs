@@ -1,6 +1,7 @@
 import { defineConfig } from 'astro/config';
 
-// Troque pela URL real quando o site for publicado (usada nas prévias de link).
+// Endereço oficial do site (usado nas prévias de link e no endereço canônico).
+// Publicado na Cloudflare (Worker com arquivos estáticos, veja wrangler.jsonc).
 export default defineConfig({
-  site: 'https://portfolio-beatriz.netlify.app',
+  site: 'https://beatrizchiusi.com.br',
 });

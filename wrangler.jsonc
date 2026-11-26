@@ -1,0 +1,13 @@
+// Publicação na Cloudflare: um Worker que só serve os arquivos estáticos gerados pelo Astro (dist/).
+// O nome é o do Worker que já está ligado ao domínio beatrizchiusi.com.br (e www) no painel.
+// Publicar: npm run build && npx wrangler deploy
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "patient-dawn-1154",
+  "compatibility_date": "2026-11-25",
+  "assets": {
+    "directory": "./dist",
+    // /sobre, /croquis etc. não existem mais: respondem 404 em vez de cair na página inicial
+    "not_found_handling": "none"
+  }
+}
